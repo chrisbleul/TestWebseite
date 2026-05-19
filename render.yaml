@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: simplecrm
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /data/crm.db
+
+    # Persistente Disk – verhindert Datenverlust bei Redeploys.
+    # Erfordert einen kostenpflichtigen Plan (ab ~$0.25/GB/Monat).
+    # Einfach auskommentieren für den kostenlosen Tier (Daten gehen bei Redeploy verloren).
+    disk:
+      name: crm-data
+      mountPath: /data
+      sizeGB: 1
