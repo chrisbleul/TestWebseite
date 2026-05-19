@@ -59,6 +59,8 @@
     input[type="tel"],
     select,
     textarea {
+      font-family: inherit;
+      font-size: inherit;
       width: 100%;
       padding: 10px 14px;
       border: 1px solid #ccc;
@@ -72,7 +74,8 @@
     input:focus,
     select:focus,
     textarea:focus {
-      outline: none;
+      outline: 2px solid #4a90e2;
+      outline-offset: 1px;
       border-color: #4a90e2;
       background-color: #fff;
     }
@@ -168,7 +171,7 @@
 
       <button type="submit">Nachricht senden</button>
 
-      <div class="success-message" id="successMsg">
+      <div class="success-message" id="successMsg" aria-live="polite">
         Vielen Dank! Ihre Nachricht wurde erfolgreich gesendet.
       </div>
 
@@ -178,8 +181,10 @@
   <script>
     function handleSubmit(event) {
       event.preventDefault();
-      document.getElementById('successMsg').style.display = 'block';
+      const msg = document.getElementById('successMsg');
+      msg.style.display = 'block';
       event.target.reset();
+      event.target.addEventListener('input', () => { msg.style.display = 'none'; }, { once: true });
     }
   </script>
 
