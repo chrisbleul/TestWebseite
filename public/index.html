@@ -493,7 +493,8 @@
         <div class="form-row">
           <div class="form-group">
             <label for="unternehmen">Unternehmen</label>
-            <input type="text" id="unternehmen" placeholder="Firma GmbH">
+            <input type="text" id="unternehmen" placeholder="Firma GmbH" list="companies-list" autocomplete="off">
+            <datalist id="companies-list"></datalist>
           </div>
           <div class="form-group">
             <label for="position">Position</label>
@@ -617,6 +618,13 @@
       ['vorname','nachname','email','telefon','mobil','unternehmen','position','notizen']
         .forEach(f => { document.getElementById(f).value = contact[f] || ''; });
     }
+
+    fetch('/api/companies')
+      .then(r => r.json())
+      .then(companies => {
+        const list = document.getElementById('companies-list');
+        list.innerHTML = companies.map(c => `<option value="${esc(c)}">`).join('');
+      });
 
     document.getElementById('modalOverlay').classList.add('open');
     document.getElementById('vorname').focus();

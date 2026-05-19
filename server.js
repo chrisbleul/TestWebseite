@@ -31,6 +31,14 @@ app.get('/api/contacts', (req, res) => {
   res.json(contacts);
 });
 
+// GET distinct Firmennamen für Autocomplete
+app.get('/api/companies', (req, res) => {
+  const rows = db.prepare(
+    'SELECT DISTINCT unternehmen FROM contacts WHERE unternehmen IS NOT NULL ORDER BY unternehmen'
+  ).all();
+  res.json(rows.map(r => r.unternehmen));
+});
+
 // POST neuer Kontakt
 app.post('/api/contacts', (req, res) => {
   const { id, vorname, nachname, email, telefon, mobil, unternehmen, position, notizen } = req.body;
