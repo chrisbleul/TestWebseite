@@ -3,190 +3,702 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kontaktformular</title>
+  <title>CRM – Kontakte</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --danger-dark: #b91c1c;
+      --bg: #f1f5f9;
+      --sidebar-bg: #1e293b;
+      --sidebar-text: #94a3b8;
+      --sidebar-active: #2563eb;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
     }
 
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0f2f5;
+      background: var(--bg);
+      color: var(--text);
       display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
-      padding: 20px;
     }
 
-    .form-container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      padding: 40px;
-      width: 100%;
-      max-width: 480px;
-    }
-
-    h1 {
-      font-size: 1.6rem;
-      color: #1a1a2e;
-      margin-bottom: 8px;
-    }
-
-    .subtitle {
-      color: #666;
-      font-size: 0.9rem;
-      margin-bottom: 28px;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 6px;
-    }
-
-    input[type="text"],
-    input[type="email"],
-    input[type="tel"],
-    select,
-    textarea {
-      font-family: inherit;
-      font-size: inherit;
-      width: 100%;
-      padding: 10px 14px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 0.95rem;
-      color: #333;
-      transition: border-color 0.2s;
-      background-color: #fafafa;
-    }
-
-    input:focus,
-    select:focus,
-    textarea:focus {
-      outline: 2px solid #4a90e2;
-      outline-offset: 1px;
-      border-color: #4a90e2;
-      background-color: #fff;
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 100px;
-    }
-
-    .form-row {
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      background: var(--sidebar-bg);
       display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 20px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      border-bottom: 1px solid #334155;
+    }
+
+    .sidebar-logo span { color: var(--primary); }
+
+    .sidebar-nav { padding: 16px 0; flex: 1; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      color: var(--sidebar-text);
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-item.active {
+      color: #fff;
+      background: rgba(37, 99, 235, 0.15);
+      border-left-color: var(--sidebar-active);
+    }
+
+    .nav-icon { font-size: 1rem; width: 18px; text-align: center; }
+
+    /* ── Main ── */
+    .main {
+      margin-left: 220px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       gap: 16px;
     }
 
-    .form-row .form-group {
+    .topbar h1 { font-size: 1.25rem; color: var(--text); }
+
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    .search-input {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      width: 220px;
+      background: var(--bg);
+    }
+
+    .search-input:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 1px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: var(--danger-dark); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg); }
+
+    /* ── Content ── */
+    .content { padding: 24px 28px; flex: 1; }
+
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
       flex: 1;
     }
 
-    button[type="submit"] {
+    .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--text); }
+
+    /* ── Table ── */
+    .table-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table {
       width: 100%;
-      padding: 12px;
-      background-color: #4a90e2;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead th {
+      background: var(--bg);
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+
+    td { padding: 12px 16px; vertical-align: middle; }
+
+    .contact-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--primary);
       color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 1rem;
+      font-weight: 700;
+      font-size: 0.8rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .contact-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .contact-name { font-weight: 600; }
+    .contact-company { font-size: 0.8rem; color: var(--text-muted); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
       font-weight: 600;
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .actions { display: flex; gap: 6px; }
+
+    .btn-icon {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      border-radius: 5px;
       cursor: pointer;
-      transition: background-color 0.2s;
-      margin-top: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      font-family: inherit;
     }
 
-    button[type="submit"]:hover {
-      background-color: #357abd;
+    .btn-icon:hover { background: var(--bg); color: var(--text); }
+    .btn-icon.delete:hover { background: #fee2e2; color: var(--danger); border-color: #fca5a5; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
     }
 
-    .success-message {
+    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state p { margin-bottom: 16px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
       display: none;
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--card-bg);
+      border-radius: 10px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+    }
+
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 { font-size: 1.1rem; }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .modal-close:hover { background: var(--bg); color: var(--text); }
+
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+    }
+
+    .form-row { display: flex; gap: 14px; }
+    .form-row .form-group { flex: 1; }
+
+    .form-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 12px 16px;
-      margin-top: 16px;
       font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 1px;
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    .modal-footer {
+      padding: 14px 24px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* ── Delete confirm ── */
+    .confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .confirm-overlay.open { display: flex; }
+
+    .confirm-box {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 28px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .confirm-box .confirm-icon { font-size: 2rem; margin-bottom: 12px; }
+    .confirm-box h3 { margin-bottom: 8px; }
+    .confirm-box p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .confirm-buttons { display: flex; gap: 10px; justify-content: center; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .stats-row { flex-direction: column; }
+      .topbar { flex-wrap: wrap; }
+      .search-input { width: 100%; }
+      table thead { display: none; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; padding: 8px 0; }
+      td { border: none; padding: 6px 14px; }
+      td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 2px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <div class="form-container">
-    <h1>Kontakt aufnehmen</h1>
-    <p class="subtitle">Füllen Sie das Formular aus und wir melden uns bei Ihnen.</p>
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">Simple<span>CRM</span></div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active">
+      <span class="nav-icon">👥</span> Kontakte
+    </div>
+    <div class="nav-item" style="opacity:.4;cursor:default;">
+      <span class="nav-icon">🏢</span> Unternehmen
+    </div>
+    <div class="nav-item" style="opacity:.4;cursor:default;">
+      <span class="nav-icon">📋</span> Aufgaben
+    </div>
+    <div class="nav-item" style="opacity:.4;cursor:default;">
+      <span class="nav-icon">📈</span> Berichte
+    </div>
+  </nav>
+</aside>
 
-    <form id="contactForm" onsubmit="handleSubmit(event)">
+<!-- Main -->
+<div class="main">
+  <header class="topbar">
+    <h1>Kontakte</h1>
+    <div class="topbar-right">
+      <input class="search-input" type="text" id="searchInput" placeholder="Suchen …" oninput="renderTable()">
+      <button class="btn btn-primary" onclick="openModal()">+ Neuer Kontakt</button>
+    </div>
+  </header>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="vorname">Vorname</label>
-          <input type="text" id="vorname" name="vorname" placeholder="Max" required>
-        </div>
-        <div class="form-group">
-          <label for="nachname">Nachname</label>
-          <input type="text" id="nachname" name="nachname" placeholder="Mustermann" required>
-        </div>
+  <div class="content">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Kontakte gesamt</div>
+        <div class="stat-value" id="statTotal">0</div>
       </div>
-
-      <div class="form-group">
-        <label for="email">E-Mail-Adresse</label>
-        <input type="email" id="email" name="email" placeholder="max@beispiel.de" required>
+      <div class="stat-card">
+        <div class="stat-label">Unternehmen</div>
+        <div class="stat-value" id="statCompanies">0</div>
       </div>
-
-      <div class="form-group">
-        <label for="telefon">Telefon (optional)</label>
-        <input type="tel" id="telefon" name="telefon" placeholder="+49 123 456789">
+      <div class="stat-card">
+        <div class="stat-label">Zuletzt hinzugefügt</div>
+        <div class="stat-value" id="statLatest" style="font-size:1rem;padding-top:4px;">–</div>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="thema">Thema</label>
-        <select id="thema" name="thema" required>
-          <option value="" disabled selected>Bitte wählen …</option>
-          <option value="allgemein">Allgemeine Anfrage</option>
-          <option value="support">Technischer Support</option>
-          <option value="zusammenarbeit">Zusammenarbeit</option>
-          <option value="sonstiges">Sonstiges</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="nachricht">Nachricht</label>
-        <textarea id="nachricht" name="nachricht" placeholder="Ihre Nachricht …" required></textarea>
-      </div>
-
-      <button type="submit">Nachricht senden</button>
-
-      <div class="success-message" id="successMsg" aria-live="polite">
-        Vielen Dank! Ihre Nachricht wurde erfolgreich gesendet.
-      </div>
-
-    </form>
+    <div class="table-card">
+      <table id="contactTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>E-Mail</th>
+            <th>Telefon</th>
+            <th>Position</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
   </div>
+</div>
 
-  <script>
-    function handleSubmit(event) {
-      event.preventDefault();
-      const msg = document.getElementById('successMsg');
-      msg.style.display = 'block';
-      event.target.reset();
-      event.target.addEventListener('input', () => { msg.style.display = 'none'; }, { once: true });
+<!-- Modal: Kontakt hinzufügen / bearbeiten -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <h2 id="modalTitle">Neuer Kontakt</h2>
+      <button class="modal-close" onclick="closeModal()" aria-label="Schließen">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="contactForm" onsubmit="saveContact(event)">
+        <input type="hidden" id="contactId">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="vorname">Vorname *</label>
+            <input type="text" id="vorname" placeholder="Max" required>
+          </div>
+          <div class="form-group">
+            <label for="nachname">Nachname *</label>
+            <input type="text" id="nachname" placeholder="Mustermann" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="email">E-Mail</label>
+          <input type="email" id="email" placeholder="max@firma.de">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="telefon">Telefon</label>
+            <input type="tel" id="telefon" placeholder="+49 123 456789">
+          </div>
+          <div class="form-group">
+            <label for="mobil">Mobil</label>
+            <input type="tel" id="mobil" placeholder="+49 170 1234567">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="unternehmen">Unternehmen</label>
+            <input type="text" id="unternehmen" placeholder="Firma GmbH">
+          </div>
+          <div class="form-group">
+            <label for="position">Position</label>
+            <input type="text" id="position" placeholder="Geschäftsführer">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="notizen">Notizen</label>
+          <textarea id="notizen" placeholder="Weitere Informationen …"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="document.getElementById('contactForm').requestSubmit()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm: Löschen -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <h3>Kontakt löschen?</h3>
+    <p id="confirmText">Dieser Kontakt wird unwiderruflich gelöscht.</p>
+    <div class="confirm-buttons">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Abbrechen</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'crm_contacts';
+  let deleteTargetId = null;
+
+  function loadContacts() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }
+
+  function saveContacts(contacts) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts));
+  }
+
+  function initials(vorname, nachname) {
+    return ((vorname[0] || '') + (nachname[0] || '')).toUpperCase();
+  }
+
+  function avatarColor(name) {
+    const colors = ['#2563eb','#7c3aed','#db2777','#059669','#d97706','#dc2626'];
+    let hash = 0;
+    for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  function renderTable() {
+    const contacts = loadContacts();
+    const query = document.getElementById('searchInput').value.toLowerCase();
+
+    const filtered = contacts.filter(c =>
+      [c.vorname, c.nachname, c.email, c.unternehmen, c.position]
+        .some(v => (v || '').toLowerCase().includes(query))
+    );
+
+    const tbody = document.getElementById('tableBody');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr><td colspan="5">
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <p>${query ? 'Keine Treffer für „' + query + '"' : 'Noch keine Kontakte angelegt.'}</p>
+            ${!query ? '<button class="btn btn-primary" onclick="openModal()">+ Ersten Kontakt hinzufügen</button>' : ''}
+          </div>
+        </td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map(c => `
+        <tr>
+          <td data-label="Name">
+            <div class="contact-name-cell">
+              <div class="contact-avatar" style="background:${avatarColor(c.vorname + c.nachname)}">${initials(c.vorname, c.nachname)}</div>
+              <div>
+                <div class="contact-name">${esc(c.vorname)} ${esc(c.nachname)}</div>
+                ${c.unternehmen ? `<div class="contact-company">${esc(c.unternehmen)}</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td data-label="E-Mail">${c.email ? `<a href="mailto:${esc(c.email)}" style="color:var(--primary)">${esc(c.email)}</a>` : '–'}</td>
+          <td data-label="Telefon">${c.telefon ? `<a href="tel:${esc(c.telefon)}" style="color:inherit">${esc(c.telefon)}</a>` : '–'}</td>
+          <td data-label="Position">${c.position ? `<span class="badge">${esc(c.position)}</span>` : '–'}</td>
+          <td data-label="Aktionen">
+            <div class="actions">
+              <button class="btn-icon" onclick="openModal('${c.id}')">✏️ Bearbeiten</button>
+              <button class="btn-icon delete" onclick="askDelete('${c.id}', '${esc(c.vorname)} ${esc(c.nachname)}')">🗑️</button>
+            </div>
+          </td>
+        </tr>`).join('');
     }
-  </script>
+
+    updateStats(contacts);
+  }
+
+  function updateStats(contacts) {
+    document.getElementById('statTotal').textContent = contacts.length;
+    const companies = new Set(contacts.map(c => c.unternehmen).filter(Boolean));
+    document.getElementById('statCompanies').textContent = companies.size;
+    if (contacts.length > 0) {
+      const last = contacts[contacts.length - 1];
+      document.getElementById('statLatest').textContent = `${last.vorname} ${last.nachname}`;
+    } else {
+      document.getElementById('statLatest').textContent = '–';
+    }
+  }
+
+  function openModal(id = null) {
+    document.getElementById('contactForm').reset();
+    document.getElementById('contactId').value = '';
+    document.getElementById('modalTitle').textContent = 'Neuer Kontakt';
+
+    if (id) {
+      const contact = loadContacts().find(c => c.id === id);
+      if (!contact) return;
+      document.getElementById('modalTitle').textContent = 'Kontakt bearbeiten';
+      document.getElementById('contactId').value = contact.id;
+      ['vorname','nachname','email','telefon','mobil','unternehmen','position','notizen']
+        .forEach(f => { document.getElementById(f).value = contact[f] || ''; });
+    }
+
+    document.getElementById('modalOverlay').classList.add('open');
+    document.getElementById('vorname').focus();
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+
+  function saveContact(event) {
+    event.preventDefault();
+    const contacts = loadContacts();
+    const id = document.getElementById('contactId').value;
+
+    const data = {
+      id: id || crypto.randomUUID(),
+      vorname: document.getElementById('vorname').value.trim(),
+      nachname: document.getElementById('nachname').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      telefon: document.getElementById('telefon').value.trim(),
+      mobil: document.getElementById('mobil').value.trim(),
+      unternehmen: document.getElementById('unternehmen').value.trim(),
+      position: document.getElementById('position').value.trim(),
+      notizen: document.getElementById('notizen').value.trim(),
+    };
+
+    if (id) {
+      const idx = contacts.findIndex(c => c.id === id);
+      contacts[idx] = data;
+    } else {
+      contacts.push(data);
+    }
+
+    saveContacts(contacts);
+    closeModal();
+    renderTable();
+  }
+
+  function askDelete(id, name) {
+    deleteTargetId = id;
+    document.getElementById('confirmText').textContent = `„${name}" wird unwiderruflich gelöscht.`;
+    document.getElementById('confirmOverlay').classList.add('open');
+  }
+
+  function closeConfirm() {
+    deleteTargetId = null;
+    document.getElementById('confirmOverlay').classList.remove('open');
+  }
+
+  function confirmDelete() {
+    if (!deleteTargetId) return;
+    const contacts = loadContacts().filter(c => c.id !== deleteTargetId);
+    saveContacts(contacts);
+    closeConfirm();
+    renderTable();
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // Schließen bei Klick auf Overlay
+  document.getElementById('modalOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+  document.getElementById('confirmOverlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeConfirm();
+  });
+
+  // Escape-Taste schließt Modal
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+  });
+
+  renderTable();
+</script>
 
 </body>
 </html>
