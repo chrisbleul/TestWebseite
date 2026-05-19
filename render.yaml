@@ -2,7 +2,7 @@ services:
   - type: web
     name: simplecrm
     runtime: node
-    buildCommand: npm install && npm rebuild better-sqlite3
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
