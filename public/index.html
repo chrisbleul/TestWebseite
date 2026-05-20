@@ -49,6 +49,7 @@
     .btn-danger:hover { background: var(--danger-dark); }
     .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
     .btn-ghost:hover { background: var(--bg); }
+    .btn-ghost.active { background: #fef9c3; color: #854d0e; border-color: #fde047; }
 
     /* Content */
     .content { padding: 24px 28px; flex: 1; }
@@ -76,6 +77,15 @@
     .btn-icon { padding: 5px 10px; font-size: 0.8rem; border-radius: 5px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-muted); transition: all 0.15s; font-family: inherit; }
     .btn-icon:hover { background: var(--bg); color: var(--text); }
     .btn-icon.delete:hover { background: #fee2e2; color: var(--danger); border-color: #fca5a5; }
+    .star-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px; line-height: 1; opacity: 0.3; transition: opacity 0.15s, transform 0.1s; }
+    .star-btn:hover { opacity: 0.7; transform: scale(1.2); }
+    .star-btn.active { opacity: 1; }
+    th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+    th.sortable:hover { color: var(--text); }
+    th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 0.7rem; }
+    th.sort-asc .sort-icon::after { content: '▲'; opacity: 1; }
+    th.sort-desc .sort-icon::after { content: '▼'; opacity: 1; }
+    th:not(.sort-asc):not(.sort-desc) .sort-icon::after { content: '⇅'; }
 
     .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
     .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
@@ -148,6 +158,8 @@
       <h1>Kontakte</h1>
       <div class="topbar-right">
         <input class="search-input" id="contactSearch" placeholder="Suchen …" oninput="renderContactTable()">
+        <button class="btn btn-ghost" id="favFilterBtn" onclick="toggleFavFilter()" title="Nur Favoriten anzeigen">⭐ Favoriten</button>
+        <button class="btn btn-ghost" onclick="exportCSV('contacts')" title="Als CSV exportieren">↓ CSV</button>
         <button class="btn btn-primary" onclick="openContactModal()">+ Neuer Kontakt</button>
       </div>
     </header>
@@ -159,7 +171,14 @@
       </div>
       <div class="table-card">
         <table>
-          <thead><tr><th>Name</th><th>E-Mail</th><th>Telefon</th><th>Position</th><th></th></tr></thead>
+          <thead><tr>
+            <th style="width:32px"></th>
+            <th class="sortable" id="th-c-name" onclick="sortContacts('name')">Name<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-c-email" onclick="sortContacts('email')">E-Mail<span class="sort-icon"></span></th>
+            <th>Telefon</th>
+            <th class="sortable" id="th-c-position" onclick="sortContacts('position')">Position<span class="sort-icon"></span></th>
+            <th></th>
+          </tr></thead>
           <tbody id="contactTableBody"></tbody>
         </table>
       </div>
@@ -172,6 +191,7 @@
       <h1>Unternehmen</h1>
       <div class="topbar-right">
         <input class="search-input" id="companySearch" placeholder="Suchen …" oninput="renderCompanyTable()">
+        <button class="btn btn-ghost" onclick="exportCSV('companies')" title="Als CSV exportieren">↓ CSV</button>
         <button class="btn btn-primary" onclick="openCompanyModal()">+ Neues Unternehmen</button>
       </div>
     </header>
@@ -183,7 +203,13 @@
       </div>
       <div class="table-card">
         <table>
-          <thead><tr><th>Unternehmen</th><th>Branche</th><th>Mitarbeiter</th><th>Kontakte</th><th></th></tr></thead>
+          <thead><tr>
+            <th class="sortable" id="th-co-name" onclick="sortCompanies('name')">Unternehmen<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-co-branche" onclick="sortCompanies('branche')">Branche<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-co-mitarbeiter" onclick="sortCompanies('mitarbeiter')">Mitarbeiter<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-co-kontakte" onclick="sortCompanies('kontakte')">Kontakte<span class="sort-icon"></span></th>
+            <th></th>
+          </tr></thead>
           <tbody id="companyTableBody"></tbody>
         </table>
       </div>
@@ -279,6 +305,9 @@
   let allCompanies = [];
   let deleteTargetId = null;
   let deleteTargetType = null;
+  let showOnlyFavorites = false;
+  let contactSort = { key: 'name', dir: 1 };
+  let companySort = { key: 'name', dir: 1 };
 
   // ── Helpers ─────────────────────────────────
   function esc(s) {
@@ -306,20 +335,62 @@
     renderContactTable();
   }
 
+  function sortContacts(key) {
+    if (contactSort.key === key) contactSort.dir *= -1;
+    else { contactSort.key = key; contactSort.dir = 1; }
+    renderContactTable();
+  }
+
+  function toggleFavFilter() {
+    showOnlyFavorites = !showOnlyFavorites;
+    document.getElementById('favFilterBtn').classList.toggle('active', showOnlyFavorites);
+    renderContactTable();
+  }
+
+  async function toggleFavorit(id) {
+    const updated = await fetch(`/api/contacts/${id}/favorit`, { method: 'PATCH' }).then(r => r.json());
+    const idx = allContacts.findIndex(c => c.id === id);
+    if (idx !== -1) allContacts[idx] = updated;
+    renderContactTable();
+  }
+
   function renderContactTable() {
     const q = document.getElementById('contactSearch').value.toLowerCase();
-    const filtered = allContacts.filter(c =>
+    let filtered = allContacts.filter(c =>
       [c.vorname, c.nachname, c.email, c.unternehmen, c.position].some(v => (v||'').toLowerCase().includes(q))
     );
+    if (showOnlyFavorites) filtered = filtered.filter(c => c.favorit);
+
+    // Sortierung
+    const { key, dir } = contactSort;
+    filtered = [...filtered].sort((a, b) => {
+      let av, bv;
+      if (key === 'name') { av = `${a.nachname}${a.vorname}`; bv = `${b.nachname}${b.vorname}`; }
+      else if (key === 'email') { av = a.email || ''; bv = b.email || ''; }
+      else if (key === 'position') { av = a.position || ''; bv = b.position || ''; }
+      return av.localeCompare(bv, 'de') * dir;
+    });
+
+    // Header-Indikatoren aktualisieren
+    ['name','email','position'].forEach(k => {
+      const el = document.getElementById(`th-c-${k}`);
+      el.classList.remove('sort-asc','sort-desc');
+      if (contactSort.key === k) el.classList.add(dir === 1 ? 'sort-asc' : 'sort-desc');
+    });
+
+    const colspan = 6;
     const tbody = document.getElementById('contactTableBody');
     if (!filtered.length) {
-      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+      tbody.innerHTML = `<tr><td colspan="${colspan}"><div class="empty-state">
         <div class="empty-icon">👥</div>
-        <p>${q ? 'Keine Treffer für „'+esc(q)+'"' : 'Noch keine Kontakte angelegt.'}</p>
-        ${!q ? '<button class="btn btn-primary" onclick="openContactModal()">+ Ersten Kontakt hinzufügen</button>' : ''}
+        <p>${showOnlyFavorites ? 'Keine Favoriten vorhanden.' : q ? 'Keine Treffer für „'+esc(q)+'"' : 'Noch keine Kontakte angelegt.'}</p>
+        ${!q && !showOnlyFavorites ? '<button class="btn btn-primary" onclick="openContactModal()">+ Ersten Kontakt hinzufügen</button>' : ''}
       </div></td></tr>`;
     } else {
       tbody.innerHTML = filtered.map(c => `<tr>
+        <td style="width:32px;padding:8px 4px 8px 12px">
+          <button class="star-btn ${c.favorit ? 'active' : ''}" onclick="toggleFavorit('${c.id}')" title="${c.favorit ? 'Favorit entfernen' : 'Als Favorit markieren'}">⭐</button>
+        </td>
         <td data-label="Name"><div class="name-cell">
           <div class="avatar" style="background:${avatarColor(c.vorname+c.nachname)}">${initials(c.vorname,c.nachname)}</div>
           <div><div class="name-cell-main">${esc(c.vorname)} ${esc(c.nachname)}</div>
@@ -395,11 +466,31 @@
     renderCompanyTable();
   }
 
+  function sortCompanies(key) {
+    if (companySort.key === key) companySort.dir *= -1;
+    else { companySort.key = key; companySort.dir = 1; }
+    renderCompanyTable();
+  }
+
   function renderCompanyTable() {
     const q = document.getElementById('companySearch').value.toLowerCase();
-    const filtered = allCompanies.filter(c =>
+    let filtered = allCompanies.filter(c =>
       [c.name, c.branche, c.ort].some(v => (v||'').toLowerCase().includes(q))
     );
+
+    const { key, dir } = companySort;
+    filtered = [...filtered].sort((a, b) => {
+      const av = key === 'mitarbeiter' || key === 'kontakte' ? (a[key] || 0) : (a[key] || '');
+      const bv = key === 'mitarbeiter' || key === 'kontakte' ? (b[key] || 0) : (b[key] || '');
+      if (typeof av === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv), 'de') * dir;
+    });
+
+    ['name','branche','mitarbeiter','kontakte'].forEach(k => {
+      const el = document.getElementById(`th-co-${k}`);
+      el.classList.remove('sort-asc','sort-desc');
+      if (companySort.key === k) el.classList.add(dir === 1 ? 'sort-asc' : 'sort-desc');
+    });
     const tbody = document.getElementById('companyTableBody');
     if (!filtered.length) {
       tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
@@ -503,6 +594,28 @@
     await fetch(`/api/${deleteTargetType === 'company' ? 'companies' : 'contacts'}/${deleteTargetId}`, { method: 'DELETE' });
     closeConfirm();
     deleteTargetType === 'company' ? await loadCompanies() : await loadContacts();
+  }
+
+  // ── CSV Export ──────────────────────────────
+  function exportCSV(type) {
+    const isContacts = type === 'contacts';
+    const data = isContacts ? allContacts : allCompanies;
+    const headers = isContacts
+      ? ['Vorname','Nachname','E-Mail','Telefon','Mobil','Unternehmen','Position','Notizen','Favorit','Erstellt am']
+      : ['Name','Branche','Mitarbeiter','Website','Straße','PLZ','Ort','Land','Notizen','Erstellt am'];
+    const fields = isContacts
+      ? ['vorname','nachname','email','telefon','mobil','unternehmen','position','notizen','favorit','erstellt_am']
+      : ['name','branche','mitarbeiter','website','strasse','plz','ort','land','notizen','erstellt_am'];
+    const csv = [
+      headers.join(';'),
+      ...data.map(row => fields.map(f => `"${String(row[f] ?? '').replace(/"/g,'""')}"`).join(';'))
+    ].join('\r\n');
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })),
+      download: `${isContacts ? 'kontakte' : 'unternehmen'}_${new Date().toISOString().slice(0,10)}.csv`,
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   // ── Events ──────────────────────────────────

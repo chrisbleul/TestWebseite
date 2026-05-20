@@ -11,17 +11,18 @@ db.pragma('foreign_keys = ON');
 // ── Schema ────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS companies (
-    id          TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    branche     TEXT,
-    mitarbeiter INTEGER,
-    website     TEXT,
-    strasse     TEXT,
-    plz         TEXT,
-    ort         TEXT,
-    land        TEXT,
-    notizen     TEXT,
-    erstellt_am TEXT NOT NULL DEFAULT (datetime('now'))
+    id             TEXT PRIMARY KEY,
+    name           TEXT NOT NULL,
+    branche        TEXT,
+    mitarbeiter    INTEGER,
+    website        TEXT,
+    strasse        TEXT,
+    plz            TEXT,
+    ort            TEXT,
+    land           TEXT,
+    notizen        TEXT,
+    erstellt_am    TEXT NOT NULL DEFAULT (datetime('now')),
+    aktualisiert_am TEXT
   )
 `);
 
@@ -31,16 +32,18 @@ const contactCols = db.prepare("SELECT name FROM pragma_table_info('contacts')")
 if (contactCols.length === 0) {
   db.exec(`
     CREATE TABLE contacts (
-      id             TEXT PRIMARY KEY,
-      vorname        TEXT NOT NULL,
-      nachname       TEXT NOT NULL,
-      email          TEXT,
-      telefon        TEXT,
-      mobil          TEXT,
-      unternehmen_id TEXT REFERENCES companies(id) ON DELETE SET NULL,
-      position       TEXT,
-      notizen        TEXT,
-      erstellt_am    TEXT NOT NULL DEFAULT (datetime('now'))
+      id              TEXT PRIMARY KEY,
+      vorname         TEXT NOT NULL,
+      nachname        TEXT NOT NULL,
+      email           TEXT,
+      telefon         TEXT,
+      mobil           TEXT,
+      unternehmen_id  TEXT REFERENCES companies(id) ON DELETE SET NULL,
+      position        TEXT,
+      notizen         TEXT,
+      favorit         INTEGER NOT NULL DEFAULT 0,
+      erstellt_am     TEXT NOT NULL DEFAULT (datetime('now')),
+      aktualisiert_am TEXT
     )
   `);
 } else if (contactCols.includes('unternehmen') && !contactCols.includes('unternehmen_id')) {
@@ -56,16 +59,18 @@ if (contactCols.length === 0) {
     }
     db.exec(`
       CREATE TABLE contacts_new (
-        id             TEXT PRIMARY KEY,
-        vorname        TEXT NOT NULL,
-        nachname       TEXT NOT NULL,
-        email          TEXT,
-        telefon        TEXT,
-        mobil          TEXT,
-        unternehmen_id TEXT REFERENCES companies(id) ON DELETE SET NULL,
-        position       TEXT,
-        notizen        TEXT,
-        erstellt_am    TEXT NOT NULL DEFAULT (datetime('now'))
+        id              TEXT PRIMARY KEY,
+        vorname         TEXT NOT NULL,
+        nachname        TEXT NOT NULL,
+        email           TEXT,
+        telefon         TEXT,
+        mobil           TEXT,
+        unternehmen_id  TEXT REFERENCES companies(id) ON DELETE SET NULL,
+        position        TEXT,
+        notizen         TEXT,
+        favorit         INTEGER NOT NULL DEFAULT 0,
+        erstellt_am     TEXT NOT NULL DEFAULT (datetime('now')),
+        aktualisiert_am TEXT
       )
     `);
     const ins = db.prepare(`
@@ -80,6 +85,20 @@ if (contactCols.length === 0) {
     db.exec('DROP TABLE contacts');
     db.exec('ALTER TABLE contacts_new RENAME TO contacts');
   })();
+} else {
+  // Add new columns to existing schema if missing
+  for (const [col, def] of [
+    ['favorit', 'INTEGER NOT NULL DEFAULT 0'],
+    ['aktualisiert_am', 'TEXT'],
+  ]) {
+    if (!contactCols.includes(col)) {
+      db.exec(`ALTER TABLE contacts ADD COLUMN ${col} ${def}`);
+    }
+  }
+  const companyCols = db.prepare("SELECT name FROM pragma_table_info('companies')").all().map(r => r.name);
+  if (!companyCols.includes('aktualisiert_am')) {
+    db.exec('ALTER TABLE companies ADD COLUMN aktualisiert_am TEXT');
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────
@@ -106,7 +125,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Contacts ──────────────────────────────────────────
 app.get('/api/contacts', (req, res) => {
-  res.json(db.prepare(contactWithCompany + ' ORDER BY c.nachname, c.vorname').all());
+  res.json(db.prepare(contactWithCompany + ' ORDER BY c.favorit DESC, c.nachname, c.vorname').all());
 });
 
 app.post('/api/contacts', (req, res) => {
@@ -126,9 +145,18 @@ app.put('/api/contacts/:id', (req, res) => {
   const unternehmen_id = resolveCompany(unternehmen);
   const r = db.prepare(`
     UPDATE contacts SET vorname=@vorname, nachname=@nachname, email=@email,
-      telefon=@telefon, mobil=@mobil, unternehmen_id=@unternehmen_id, position=@position, notizen=@notizen
+      telefon=@telefon, mobil=@mobil, unternehmen_id=@unternehmen_id, position=@position,
+      notizen=@notizen, aktualisiert_am=datetime('now')
     WHERE id=@id
   `).run({ id: req.params.id, vorname, nachname, email: email || null, telefon: telefon || null, mobil: mobil || null, unternehmen_id, position: position || null, notizen: notizen || null });
+  if (r.changes === 0) return res.status(404).json({ error: 'Kontakt nicht gefunden' });
+  res.json(db.prepare(contactWithCompany + ' WHERE c.id = ?').get(req.params.id));
+});
+
+app.patch('/api/contacts/:id/favorit', (req, res) => {
+  const r = db.prepare(
+    "UPDATE contacts SET favorit = CASE WHEN favorit = 1 THEN 0 ELSE 1 END, aktualisiert_am = datetime('now') WHERE id = ?"
+  ).run(req.params.id);
   if (r.changes === 0) return res.status(404).json({ error: 'Kontakt nicht gefunden' });
   res.json(db.prepare(contactWithCompany + ' WHERE c.id = ?').get(req.params.id));
 });
@@ -174,11 +202,11 @@ app.put('/api/companies/:id', (req, res) => {
   if (!name) return res.status(400).json({ error: 'name ist ein Pflichtfeld' });
   const r = db.prepare(`
     UPDATE companies SET name=@name, branche=@branche, mitarbeiter=@mitarbeiter, website=@website,
-      strasse=@strasse, plz=@plz, ort=@ort, land=@land, notizen=@notizen
+      strasse=@strasse, plz=@plz, ort=@ort, land=@land, notizen=@notizen, aktualisiert_am=datetime('now')
     WHERE id=@id
   `).run({ id: req.params.id, name, branche: branche || null, mitarbeiter: mitarbeiter || null, website: website || null, strasse: strasse || null, plz: plz || null, ort: ort || null, land: land || null, notizen: notizen || null });
   if (r.changes === 0) return res.status(404).json({ error: 'Unternehmen nicht gefunden' });
-  res.json(db.prepare(companyWithCount + ' WHERE co.id = ?').get(req.params.id));
+  res.json(db.prepare(companyById).get(req.params.id));
 });
 
 app.delete('/api/companies/:id', (req, res) => {
