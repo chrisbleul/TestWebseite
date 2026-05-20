@@ -120,6 +120,19 @@
     .confirm-box p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
     .confirm-buttons { display: flex; gap: 10px; justify-content: center; }
 
+    /* Deal status badges */
+    .status-offen         { background:#dbeafe; color:#1d4ed8; }
+    .status-in_verhandlung{ background:#fef9c3; color:#854d0e; }
+    .status-gewonnen      { background:#dcfce7; color:#166534; }
+    .status-verloren      { background:#fee2e2; color:#dc2626; }
+
+    .filter-bar { display:flex; gap:8px; padding: 12px 28px; background:var(--card-bg); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .filter-btn { padding:5px 14px; border:1px solid var(--border); border-radius:999px; font-size:0.8rem; font-weight:600; cursor:pointer; background:transparent; color:var(--text-muted); font-family:inherit; transition:all 0.15s; }
+    .filter-btn:hover  { background:var(--bg); color:var(--text); }
+    .filter-btn.active { border-color:var(--primary); background:var(--primary); color:#fff; }
+
+    .wert-cell { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
     @media (max-width: 640px) {
       .sidebar { display: none; }
       .main { margin-left: 0; }
@@ -145,7 +158,9 @@
     <div class="nav-item" id="nav-companies" onclick="showView('companies')">
       <span class="nav-icon">🏢</span> Unternehmen
     </div>
-    <div class="nav-item disabled"><span class="nav-icon">📋</span> Aufgaben</div>
+    <div class="nav-item" id="nav-deals" onclick="showView('deals')">
+      <span class="nav-icon">💼</span> Deals
+    </div>
     <div class="nav-item disabled"><span class="nav-icon">📈</span> Berichte</div>
   </nav>
 </aside>
@@ -211,6 +226,47 @@
             <th></th>
           </tr></thead>
           <tbody id="companyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Deals-View ── -->
+  <section id="view-deals" style="display:none">
+    <header class="topbar">
+      <h1>Deals</h1>
+      <div class="topbar-right">
+        <input class="search-input" id="dealSearch" placeholder="Suchen …" oninput="renderDealTable()">
+        <button class="btn btn-ghost" onclick="exportCSV('deals')" title="Als CSV exportieren">↓ CSV</button>
+        <button class="btn btn-primary" onclick="openDealModal()">+ Neuer Deal</button>
+      </div>
+    </header>
+    <div class="filter-bar" id="dealFilterBar">
+      <button class="filter-btn active" onclick="setDealFilter('')">Alle</button>
+      <button class="filter-btn" onclick="setDealFilter('offen')">Offen</button>
+      <button class="filter-btn" onclick="setDealFilter('in_verhandlung')">In Verhandlung</button>
+      <button class="filter-btn" onclick="setDealFilter('gewonnen')">Gewonnen</button>
+      <button class="filter-btn" onclick="setDealFilter('verloren')">Verloren</button>
+    </div>
+    <div class="content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Pipeline-Wert</div><div class="stat-value" id="statDealPipeline" style="font-size:1.2rem;padding-top:4px">–</div></div>
+        <div class="stat-card"><div class="stat-label">Offene Deals</div><div class="stat-value" id="statDealOpen">0</div></div>
+        <div class="stat-card"><div class="stat-label">Gewonnen (Wert)</div><div class="stat-value" id="statDealWon" style="font-size:1.2rem;padding-top:4px">–</div></div>
+        <div class="stat-card"><div class="stat-label">Gewinnrate</div><div class="stat-value" id="statDealRate">–</div></div>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead><tr>
+            <th class="sortable" id="th-d-titel" onclick="sortDeals('titel')">Titel<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-d-unternehmen" onclick="sortDeals('unternehmen')">Unternehmen<span class="sort-icon"></span></th>
+            <th>Ansprechpartner</th>
+            <th class="sortable wert-cell" id="th-d-wert" onclick="sortDeals('wert')">Wert<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-d-status" onclick="sortDeals('status')">Status<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-d-abschluss_datum" onclick="sortDeals('abschluss_datum')">Abschlussdatum<span class="sort-icon"></span></th>
+            <th></th>
+          </tr></thead>
+          <tbody id="dealTableBody"></tbody>
         </table>
       </div>
     </div>
@@ -287,6 +343,65 @@
   </div>
 </div>
 
+<!-- ── Deal-Modal ── -->
+<div class="modal-overlay" id="dealModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dealModalTitle">
+    <div class="modal-header">
+      <h2 id="dealModalTitle">Neuer Deal</h2>
+      <button class="modal-close" onclick="closeDealModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="dealForm" onsubmit="saveDeal(event)">
+        <input type="hidden" id="dealId">
+        <div class="form-group"><label for="d-titel">Titel *</label><input type="text" id="d-titel" placeholder="z.B. Jahresvertrag 2026" required></div>
+        <div class="form-group">
+          <label for="d-unternehmen">Unternehmen *</label>
+          <select id="d-unternehmen" required onchange="onDealCompanyChange()"></select>
+        </div>
+        <div class="form-group">
+          <label for="d-kontakt">Ansprechpartner</label>
+          <select id="d-kontakt"><option value="">– kein –</option></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="d-wert">Wert</label>
+            <input type="number" id="d-wert" placeholder="10000" min="0" step="0.01">
+          </div>
+          <div class="form-group" style="flex:0 0 110px">
+            <label for="d-waehrung">Währung</label>
+            <select id="d-waehrung">
+              <option value="EUR">EUR €</option>
+              <option value="USD">USD $</option>
+              <option value="GBP">GBP £</option>
+              <option value="CHF">CHF</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="d-status">Status</label>
+            <select id="d-status">
+              <option value="offen">Offen</option>
+              <option value="in_verhandlung">In Verhandlung</option>
+              <option value="gewonnen">Gewonnen</option>
+              <option value="verloren">Verloren</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="d-abschluss">Abschlussdatum</label>
+            <input type="date" id="d-abschluss">
+          </div>
+        </div>
+        <div class="form-group"><label for="d-notizen">Notizen</label><textarea id="d-notizen" placeholder="Weitere Details …"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDealModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="document.getElementById('dealForm').requestSubmit()">Speichern</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Löschen-Bestätigung ── -->
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
@@ -303,11 +418,31 @@
 <script>
   let allContacts = [];
   let allCompanies = [];
+  let allDeals     = [];
   let deleteTargetId = null;
   let deleteTargetType = null;
   let showOnlyFavorites = false;
   let contactSort = { key: 'name', dir: 1 };
   let companySort = { key: 'name', dir: 1 };
+  let dealSort    = { key: 'erstellt_am', dir: -1 };
+  let dealStatusFilter = '';
+
+  const DEAL_STATUS = {
+    offen:          { label: 'Offen',          cls: 'status-offen' },
+    in_verhandlung: { label: 'In Verhandlung', cls: 'status-in_verhandlung' },
+    gewonnen:       { label: 'Gewonnen',       cls: 'status-gewonnen' },
+    verloren:       { label: 'Verloren',       cls: 'status-verloren' },
+  };
+
+  function fmtCurrency(wert, waehrung) {
+    if (wert == null) return '–';
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: waehrung || 'EUR' }).format(wert);
+  }
+  function fmtDate(iso) {
+    if (!iso) return '–';
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  }
 
   // ── Helpers ─────────────────────────────────
   function esc(s) {
@@ -324,9 +459,12 @@
   function showView(view) {
     document.getElementById('view-contacts').style.display  = view === 'contacts'  ? '' : 'none';
     document.getElementById('view-companies').style.display = view === 'companies' ? '' : 'none';
+    document.getElementById('view-deals').style.display     = view === 'deals'     ? '' : 'none';
     document.getElementById('nav-contacts').classList.toggle('active', view === 'contacts');
     document.getElementById('nav-companies').classList.toggle('active', view === 'companies');
+    document.getElementById('nav-deals').classList.toggle('active', view === 'deals');
     if (view === 'companies') loadCompanies();
+    if (view === 'deals') loadDeals();
   }
 
   // ── Contacts ────────────────────────────────
@@ -513,6 +651,7 @@
           </span>
         </td>
         <td data-label="Aktionen"><div class="actions">
+          <button class="btn-icon" onclick="filterDealsByCompany('${c.id}','${esc(c.name)}')">💼 Deals</button>
           <button class="btn-icon" onclick="openCompanyModal('${c.id}')">✏️ Bearbeiten</button>
           <button class="btn-icon delete" onclick="askDelete('${c.id}','${esc(c.name)}','company')">🗑️</button>
         </div></td>
@@ -521,6 +660,157 @@
     document.getElementById('statCompanies').textContent = allCompanies.length;
     document.getElementById('statWithContacts').textContent = allCompanies.filter(c => c.kontakte > 0).length;
     document.getElementById('statBranches').textContent = new Set(allCompanies.map(c=>c.branche).filter(Boolean)).size;
+  }
+
+  // ── Deals ────────────────────────────────────
+  async function loadDeals() {
+    allDeals = await fetch('/api/deals').then(r => r.json());
+    if (allCompanies.length === 0) allCompanies = await fetch('/api/companies').then(r => r.json());
+    renderDealTable();
+  }
+
+  function sortDeals(key) {
+    if (dealSort.key === key) dealSort.dir *= -1;
+    else { dealSort.key = key; dealSort.dir = 1; }
+    renderDealTable();
+  }
+
+  function setDealFilter(status) {
+    dealStatusFilter = status;
+    document.querySelectorAll('#dealFilterBar .filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('onclick') === `setDealFilter('${status}')` || (status === '' && btn.getAttribute('onclick') === "setDealFilter('')"));
+    });
+    renderDealTable();
+  }
+
+  function renderDealTable() {
+    const q = (document.getElementById('dealSearch').value || '').toLowerCase();
+    let filtered = allDeals.filter(d => {
+      if (dealStatusFilter && d.status !== dealStatusFilter) return false;
+      return [d.titel, d.unternehmen, d.kontakt_name].some(v => (v||'').toLowerCase().includes(q));
+    });
+
+    const { key, dir } = dealSort;
+    filtered = [...filtered].sort((a, b) => {
+      const av = a[key] ?? '';
+      const bv = b[key] ?? '';
+      if (key === 'wert') return ((a.wert ?? -Infinity) - (b.wert ?? -Infinity)) * dir;
+      return String(av).localeCompare(String(bv), 'de') * dir;
+    });
+
+    ['titel','unternehmen','wert','status','abschluss_datum'].forEach(k => {
+      const el = document.getElementById(`th-d-${k}`);
+      if (!el) return;
+      el.classList.remove('sort-asc','sort-desc');
+      if (dealSort.key === k) el.classList.add(dir === 1 ? 'sort-asc' : 'sort-desc');
+    });
+
+    const tbody = document.getElementById('dealTableBody');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+        <div class="empty-icon">💼</div>
+        <p>${q || dealStatusFilter ? 'Keine Treffer.' : 'Noch keine Deals angelegt.'}</p>
+        ${!q && !dealStatusFilter ? '<button class="btn btn-primary" onclick="openDealModal()">+ Ersten Deal hinzufügen</button>' : ''}
+      </div></td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map(d => {
+        const st = DEAL_STATUS[d.status] || { label: d.status, cls: '' };
+        return `<tr>
+          <td data-label="Titel"><div class="name-cell-main">${esc(d.titel)}</div></td>
+          <td data-label="Unternehmen">${esc(d.unternehmen||'')}</td>
+          <td data-label="Ansprechpartner">${esc(d.kontakt_name||'–')}</td>
+          <td data-label="Wert" class="wert-cell">${fmtCurrency(d.wert, d.waehrung)}</td>
+          <td data-label="Status"><span class="badge ${st.cls}">${st.label}</span></td>
+          <td data-label="Abschlussdatum">${fmtDate(d.abschluss_datum)}</td>
+          <td data-label="Aktionen"><div class="actions">
+            <button class="btn-icon" onclick="openDealModal('${d.id}')">✏️ Bearbeiten</button>
+            <button class="btn-icon delete" onclick="askDelete('${d.id}','${esc(d.titel)}','deal')">🗑️</button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    const pipeline = allDeals.filter(d => d.status === 'offen' || d.status === 'in_verhandlung').reduce((s, d) => s + (d.wert || 0), 0);
+    const won = allDeals.filter(d => d.status === 'gewonnen').reduce((s, d) => s + (d.wert || 0), 0);
+    const closed = allDeals.filter(d => d.status === 'gewonnen' || d.status === 'verloren').length;
+    const wonCount = allDeals.filter(d => d.status === 'gewonnen').length;
+    document.getElementById('statDealPipeline').textContent = fmtCurrency(pipeline, 'EUR');
+    document.getElementById('statDealOpen').textContent = allDeals.filter(d => d.status === 'offen').length;
+    document.getElementById('statDealWon').textContent = fmtCurrency(won, 'EUR');
+    document.getElementById('statDealRate').textContent = closed ? Math.round(wonCount / closed * 100) + ' %' : '–';
+  }
+
+  function filterDealsByCompany(companyId, companyName) {
+    showView('deals');
+    document.getElementById('dealSearch').value = companyName;
+    renderDealTable();
+  }
+
+  function openDealModal(id = null) {
+    document.getElementById('dealForm').reset();
+    document.getElementById('dealId').value = '';
+    document.getElementById('dealModalTitle').textContent = 'Neuer Deal';
+
+    const coSel = document.getElementById('d-unternehmen');
+    coSel.innerHTML = '<option value="">– Unternehmen wählen –</option>' +
+      allCompanies.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+
+    document.getElementById('d-kontakt').innerHTML = '<option value="">– kein –</option>';
+
+    if (id) {
+      const d = allDeals.find(d => d.id === id); if (!d) return;
+      document.getElementById('dealModalTitle').textContent = 'Deal bearbeiten';
+      document.getElementById('dealId').value = d.id;
+      document.getElementById('d-titel').value = d.titel || '';
+      coSel.value = d.unternehmen_id || '';
+      document.getElementById('d-wert').value = d.wert ?? '';
+      document.getElementById('d-waehrung').value = d.waehrung || 'EUR';
+      document.getElementById('d-status').value = d.status || 'offen';
+      document.getElementById('d-abschluss').value = d.abschluss_datum || '';
+      document.getElementById('d-notizen').value = d.notizen || '';
+      populateDealContacts(d.unternehmen_id, d.kontakt_id);
+    }
+
+    document.getElementById('dealModalOverlay').classList.add('open');
+    document.getElementById('d-titel').focus();
+  }
+
+  function populateDealContacts(companyId, selectedId) {
+    const sel = document.getElementById('d-kontakt');
+    const contacts = allContacts.filter(c => !companyId || c.unternehmen_id === companyId);
+    sel.innerHTML = '<option value="">– kein –</option>' +
+      contacts.map(c => `<option value="${esc(c.id)}" ${c.id === selectedId ? 'selected' : ''}>${esc(c.vorname)} ${esc(c.nachname)}</option>`).join('');
+  }
+
+  function onDealCompanyChange() {
+    const companyId = document.getElementById('d-unternehmen').value;
+    populateDealContacts(companyId, null);
+  }
+
+  function closeDealModal() { document.getElementById('dealModalOverlay').classList.remove('open'); }
+
+  async function saveDeal(event) {
+    event.preventDefault();
+    const id = document.getElementById('dealId').value;
+    const wert = document.getElementById('d-wert').value;
+    const data = {
+      id: id || crypto.randomUUID(),
+      titel: document.getElementById('d-titel').value.trim(),
+      unternehmen_id: document.getElementById('d-unternehmen').value,
+      kontakt_id: document.getElementById('d-kontakt').value || null,
+      wert: wert !== '' ? parseFloat(wert) : null,
+      waehrung: document.getElementById('d-waehrung').value,
+      status: document.getElementById('d-status').value,
+      abschluss_datum: document.getElementById('d-abschluss').value || null,
+      notizen: document.getElementById('d-notizen').value.trim(),
+    };
+    await fetch(id ? `/api/deals/${id}` : '/api/deals', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    closeDealModal();
+    await loadDeals();
   }
 
   function filterContactsByCompany(name) {
@@ -581,8 +871,8 @@
   // ── Delete ──────────────────────────────────
   function askDelete(id, name, type) {
     deleteTargetId = id; deleteTargetType = type;
-    document.getElementById('confirmText').textContent =
-      `${type === 'company' ? 'Unternehmen' : 'Kontakt'} „${name}" wird unwiderruflich gelöscht.`;
+    const typeLabel = type === 'company' ? 'Unternehmen' : type === 'deal' ? 'Deal' : 'Kontakt';
+    document.getElementById('confirmText').textContent = `${typeLabel} „${name}" wird unwiderruflich gelöscht.`;
     document.getElementById('confirmOverlay').classList.add('open');
   }
   function closeConfirm() {
@@ -591,45 +881,58 @@
   }
   async function confirmDelete() {
     if (!deleteTargetId) return;
-    await fetch(`/api/${deleteTargetType === 'company' ? 'companies' : 'contacts'}/${deleteTargetId}`, { method: 'DELETE' });
+    const endpoint = deleteTargetType === 'company' ? 'companies' : deleteTargetType === 'deal' ? 'deals' : 'contacts';
+    await fetch(`/api/${endpoint}/${deleteTargetId}`, { method: 'DELETE' });
     closeConfirm();
-    deleteTargetType === 'company' ? await loadCompanies() : await loadContacts();
+    if (deleteTargetType === 'company') await loadCompanies();
+    else if (deleteTargetType === 'deal') await loadDeals();
+    else await loadContacts();
   }
 
   // ── CSV Export ──────────────────────────────
   function exportCSV(type) {
-    const isContacts = type === 'contacts';
-    const data = isContacts ? allContacts : allCompanies;
-    const headers = isContacts
-      ? ['Vorname','Nachname','E-Mail','Telefon','Mobil','Unternehmen','Position','Notizen','Favorit','Erstellt am']
-      : ['Name','Branche','Mitarbeiter','Website','Straße','PLZ','Ort','Land','Notizen','Erstellt am'];
-    const fields = isContacts
-      ? ['vorname','nachname','email','telefon','mobil','unternehmen','position','notizen','favorit','erstellt_am']
-      : ['name','branche','mitarbeiter','website','strasse','plz','ort','land','notizen','erstellt_am'];
+    let data, headers, fields, filename;
+    if (type === 'contacts') {
+      data = allContacts;
+      headers = ['Vorname','Nachname','E-Mail','Telefon','Mobil','Unternehmen','Position','Notizen','Favorit','Erstellt am'];
+      fields  = ['vorname','nachname','email','telefon','mobil','unternehmen','position','notizen','favorit','erstellt_am'];
+      filename = 'kontakte';
+    } else if (type === 'companies') {
+      data = allCompanies;
+      headers = ['Name','Branche','Mitarbeiter','Website','Straße','PLZ','Ort','Land','Notizen','Erstellt am'];
+      fields  = ['name','branche','mitarbeiter','website','strasse','plz','ort','land','notizen','erstellt_am'];
+      filename = 'unternehmen';
+    } else {
+      data = allDeals;
+      headers = ['Titel','Unternehmen','Ansprechpartner','Wert','Währung','Status','Abschlussdatum','Notizen','Erstellt am'];
+      fields  = ['titel','unternehmen','kontakt_name','wert','waehrung','status','abschluss_datum','notizen','erstellt_am'];
+      filename = 'deals';
+    }
     const csv = [
       headers.join(';'),
       ...data.map(row => fields.map(f => `"${String(row[f] ?? '').replace(/"/g,'""')}"`).join(';'))
     ].join('\r\n');
     const a = Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })),
-      download: `${isContacts ? 'kontakte' : 'unternehmen'}_${new Date().toISOString().slice(0,10)}.csv`,
+      download: `${filename}_${new Date().toISOString().slice(0,10)}.csv`,
     });
     a.click();
     URL.revokeObjectURL(a.href);
   }
 
   // ── Events ──────────────────────────────────
-  ['contactModalOverlay','companyModalOverlay','confirmOverlay'].forEach(id => {
+  ['contactModalOverlay','companyModalOverlay','dealModalOverlay','confirmOverlay'].forEach(id => {
     document.getElementById(id).addEventListener('click', e => {
       if (e.target === e.currentTarget) {
         if (id === 'contactModalOverlay') closeContactModal();
         else if (id === 'companyModalOverlay') closeCompanyModal();
+        else if (id === 'dealModalOverlay') closeDealModal();
         else closeConfirm();
       }
     });
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeContactModal(); closeCompanyModal(); closeConfirm(); }
+    if (e.key === 'Escape') { closeContactModal(); closeCompanyModal(); closeDealModal(); closeConfirm(); }
   });
 
   loadContacts();
