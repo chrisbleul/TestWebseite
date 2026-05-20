@@ -215,5 +215,76 @@ app.delete('/api/companies/:id', (req, res) => {
   res.status(204).end();
 });
 
+// ── Deals ─────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS deals (
+    id              TEXT PRIMARY KEY,
+    titel           TEXT NOT NULL,
+    wert            REAL,
+    waehrung        TEXT NOT NULL DEFAULT 'EUR',
+    status          TEXT NOT NULL DEFAULT 'offen'
+                    CHECK(status IN ('offen','in_verhandlung','gewonnen','verloren')),
+    unternehmen_id  TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    kontakt_id      TEXT REFERENCES contacts(id) ON DELETE SET NULL,
+    abschluss_datum TEXT,
+    notizen         TEXT,
+    erstellt_am     TEXT NOT NULL DEFAULT (datetime('now')),
+    aktualisiert_am TEXT
+  )
+`);
+
+const dealWithRefs = `
+  SELECT d.*,
+    co.name AS unternehmen,
+    c.vorname || ' ' || c.nachname AS kontakt_name
+  FROM deals d
+  LEFT JOIN companies co ON d.unternehmen_id = co.id
+  LEFT JOIN contacts  c  ON d.kontakt_id     = c.id
+`;
+
+app.get('/api/deals', (req, res) => {
+  const { unternehmen_id } = req.query;
+  const sql = dealWithRefs + (unternehmen_id ? ' WHERE d.unternehmen_id = ?' : '') + ' ORDER BY d.erstellt_am DESC';
+  res.json(unternehmen_id ? db.prepare(sql).all(unternehmen_id) : db.prepare(sql).all());
+});
+
+app.post('/api/deals', (req, res) => {
+  const { id, titel, wert, waehrung, status, unternehmen_id, kontakt_id, abschluss_datum, notizen } = req.body;
+  if (!id || !titel || !unternehmen_id) return res.status(400).json({ error: 'id, titel und unternehmen_id sind Pflichtfelder' });
+  db.prepare(`
+    INSERT INTO deals (id, titel, wert, waehrung, status, unternehmen_id, kontakt_id, abschluss_datum, notizen)
+    VALUES (@id, @titel, @wert, @waehrung, @status, @unternehmen_id, @kontakt_id, @abschluss_datum, @notizen)
+  `).run({ id, titel, wert: wert || null, waehrung: waehrung || 'EUR', status: status || 'offen', unternehmen_id, kontakt_id: kontakt_id || null, abschluss_datum: abschluss_datum || null, notizen: notizen || null });
+  res.status(201).json(db.prepare(dealWithRefs + ' WHERE d.id = ?').get(id));
+});
+
+app.put('/api/deals/:id', (req, res) => {
+  const { titel, wert, waehrung, status, unternehmen_id, kontakt_id, abschluss_datum, notizen } = req.body;
+  if (!titel || !unternehmen_id) return res.status(400).json({ error: 'titel und unternehmen_id sind Pflichtfelder' });
+  const r = db.prepare(`
+    UPDATE deals SET titel=@titel, wert=@wert, waehrung=@waehrung, status=@status,
+      unternehmen_id=@unternehmen_id, kontakt_id=@kontakt_id,
+      abschluss_datum=@abschluss_datum, notizen=@notizen, aktualisiert_am=datetime('now')
+    WHERE id=@id
+  `).run({ id: req.params.id, titel, wert: wert || null, waehrung: waehrung || 'EUR', status: status || 'offen', unternehmen_id, kontakt_id: kontakt_id || null, abschluss_datum: abschluss_datum || null, notizen: notizen || null });
+  if (r.changes === 0) return res.status(404).json({ error: 'Deal nicht gefunden' });
+  res.json(db.prepare(dealWithRefs + ' WHERE d.id = ?').get(req.params.id));
+});
+
+app.patch('/api/deals/:id/status', (req, res) => {
+  const { status } = req.body;
+  if (!['offen','in_verhandlung','gewonnen','verloren'].includes(status))
+    return res.status(400).json({ error: 'Ungültiger Status' });
+  const r = db.prepare("UPDATE deals SET status=?, aktualisiert_am=datetime('now') WHERE id=?").run(status, req.params.id);
+  if (r.changes === 0) return res.status(404).json({ error: 'Deal nicht gefunden' });
+  res.json(db.prepare(dealWithRefs + ' WHERE d.id = ?').get(req.params.id));
+});
+
+app.delete('/api/deals/:id', (req, res) => {
+  const r = db.prepare('DELETE FROM deals WHERE id = ?').run(req.params.id);
+  if (r.changes === 0) return res.status(404).json({ error: 'Deal nicht gefunden' });
+  res.status(204).end();
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`SimpleCRM läuft auf http://localhost:${PORT}`));
