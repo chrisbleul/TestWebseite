@@ -133,9 +133,11 @@
 
     .wert-cell { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
 
+    /* Mobile bottom nav */
+    .mobile-nav { display: none; }
     @media (max-width: 640px) {
       .sidebar { display: none; }
-      .main { margin-left: 0; }
+      .main { margin-left: 0; padding-bottom: 64px; }
       .stats-row { flex-direction: column; }
       .topbar { flex-wrap: wrap; }
       .search-input { width: 100%; }
@@ -144,6 +146,12 @@
       tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; padding: 8px 0; }
       td { border: none; padding: 6px 14px; }
       td::before { content: attr(data-label); font-weight: 700; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 2px; }
+
+      .mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: var(--sidebar-bg); border-top: 1px solid #334155; z-index: 50; }
+      .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 4px 10px; color: var(--sidebar-text); font-size: 0.65rem; gap: 3px; cursor: pointer; border: none; background: none; font-family: inherit; transition: color 0.15s; }
+      .mobile-nav-item .mobile-nav-icon { font-size: 1.3rem; line-height: 1; }
+      .mobile-nav-item.active { color: #fff; }
+      .mobile-nav-item.active .mobile-nav-icon { filter: drop-shadow(0 0 4px var(--primary)); }
     }
   </style>
 </head>
@@ -402,6 +410,19 @@
   </div>
 </div>
 
+<!-- ── Mobile Bottom Nav ── -->
+<nav class="mobile-nav">
+  <button class="mobile-nav-item active" id="mnav-contacts" onclick="showView('contacts')">
+    <span class="mobile-nav-icon">👥</span>Kontakte
+  </button>
+  <button class="mobile-nav-item" id="mnav-companies" onclick="showView('companies')">
+    <span class="mobile-nav-icon">🏢</span>Unternehmen
+  </button>
+  <button class="mobile-nav-item" id="mnav-deals" onclick="showView('deals')">
+    <span class="mobile-nav-icon">💼</span>Deals
+  </button>
+</nav>
+
 <!-- ── Löschen-Bestätigung ── -->
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
@@ -460,9 +481,10 @@
     document.getElementById('view-contacts').style.display  = view === 'contacts'  ? '' : 'none';
     document.getElementById('view-companies').style.display = view === 'companies' ? '' : 'none';
     document.getElementById('view-deals').style.display     = view === 'deals'     ? '' : 'none';
-    document.getElementById('nav-contacts').classList.toggle('active', view === 'contacts');
-    document.getElementById('nav-companies').classList.toggle('active', view === 'companies');
-    document.getElementById('nav-deals').classList.toggle('active', view === 'deals');
+    ['contacts','companies','deals'].forEach(v => {
+      document.getElementById(`nav-${v}`).classList.toggle('active', v === view);
+      document.getElementById(`mnav-${v}`).classList.toggle('active', v === view);
+    });
     if (view === 'companies') loadCompanies();
     if (view === 'deals') loadDeals();
   }
