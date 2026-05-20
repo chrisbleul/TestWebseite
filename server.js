@@ -236,7 +236,8 @@ db.exec(`
 const dealWithRefs = `
   SELECT d.*,
     co.name AS unternehmen,
-    c.vorname || ' ' || c.nachname AS kontakt_name
+    c.vorname || ' ' || c.nachname AS kontakt_name,
+    (SELECT COUNT(*) FROM quotes q WHERE q.deal_id = d.id) AS angebote_count
   FROM deals d
   LEFT JOIN companies co ON d.unternehmen_id = co.id
   LEFT JOIN contacts  c  ON d.kontakt_id     = c.id
@@ -283,6 +284,164 @@ app.patch('/api/deals/:id/status', (req, res) => {
 app.delete('/api/deals/:id', (req, res) => {
   const r = db.prepare('DELETE FROM deals WHERE id = ?').run(req.params.id);
   if (r.changes === 0) return res.status(404).json({ error: 'Deal nicht gefunden' });
+  res.status(204).end();
+});
+
+// ── Products ──────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS products (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    beschreibung    TEXT,
+    preis           REAL NOT NULL DEFAULT 0,
+    waehrung        TEXT NOT NULL DEFAULT 'EUR',
+    einheit         TEXT NOT NULL DEFAULT 'Stück',
+    erstellt_am     TEXT NOT NULL DEFAULT (datetime('now')),
+    aktualisiert_am TEXT
+  )
+`);
+
+app.get('/api/products', (req, res) => {
+  res.json(db.prepare('SELECT * FROM products ORDER BY name').all());
+});
+
+app.post('/api/products', (req, res) => {
+  const { id, name, beschreibung, preis, waehrung, einheit } = req.body;
+  if (!id || !name) return res.status(400).json({ error: 'id und name sind Pflichtfelder' });
+  db.prepare(`
+    INSERT INTO products (id, name, beschreibung, preis, waehrung, einheit)
+    VALUES (@id, @name, @beschreibung, @preis, @waehrung, @einheit)
+  `).run({ id, name, beschreibung: beschreibung || null, preis: preis ?? 0, waehrung: waehrung || 'EUR', einheit: einheit || 'Stück' });
+  res.status(201).json(db.prepare('SELECT * FROM products WHERE id = ?').get(id));
+});
+
+app.put('/api/products/:id', (req, res) => {
+  const { name, beschreibung, preis, waehrung, einheit } = req.body;
+  if (!name) return res.status(400).json({ error: 'name ist ein Pflichtfeld' });
+  const r = db.prepare(`
+    UPDATE products SET name=@name, beschreibung=@beschreibung, preis=@preis,
+      waehrung=@waehrung, einheit=@einheit, aktualisiert_am=datetime('now')
+    WHERE id=@id
+  `).run({ id: req.params.id, name, beschreibung: beschreibung || null, preis: preis ?? 0, waehrung: waehrung || 'EUR', einheit: einheit || 'Stück' });
+  if (r.changes === 0) return res.status(404).json({ error: 'Produkt nicht gefunden' });
+  res.json(db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id));
+});
+
+app.delete('/api/products/:id', (req, res) => {
+  const r = db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
+  if (r.changes === 0) return res.status(404).json({ error: 'Produkt nicht gefunden' });
+  res.status(204).end();
+});
+
+// ── Quotes ────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS quotes (
+    id              TEXT PRIMARY KEY,
+    titel           TEXT NOT NULL,
+    deal_id         TEXT REFERENCES deals(id) ON DELETE SET NULL,
+    status          TEXT NOT NULL DEFAULT 'Entwurf'
+                    CHECK(status IN ('Entwurf','Gesendet','Angenommen','Abgelehnt')),
+    gueltig_bis     TEXT,
+    waehrung        TEXT NOT NULL DEFAULT 'EUR',
+    notizen         TEXT,
+    erstellt_am     TEXT NOT NULL DEFAULT (datetime('now')),
+    aktualisiert_am TEXT
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS quote_items (
+    id           TEXT PRIMARY KEY,
+    quote_id     TEXT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+    position     INTEGER NOT NULL DEFAULT 0,
+    bezeichnung  TEXT NOT NULL,
+    beschreibung TEXT,
+    menge        REAL NOT NULL DEFAULT 1,
+    einheit      TEXT NOT NULL DEFAULT 'Stück',
+    einzelpreis  REAL NOT NULL DEFAULT 0,
+    rabatt_proz  REAL NOT NULL DEFAULT 0
+  )
+`);
+
+const quoteWithDeal = `
+  SELECT q.*,
+    d.titel AS deal_titel,
+    COALESCE((SELECT SUM(qi.menge * qi.einzelpreis * (1.0 - qi.rabatt_proz / 100.0))
+              FROM quote_items qi WHERE qi.quote_id = q.id), 0) AS gesamtwert,
+    (SELECT COUNT(*) FROM quote_items qi WHERE qi.quote_id = q.id) AS positionen
+  FROM quotes q
+  LEFT JOIN deals d ON q.deal_id = d.id
+`;
+
+app.get('/api/quotes', (req, res) => {
+  const { deal_id } = req.query;
+  const sql = quoteWithDeal + (deal_id ? ' WHERE q.deal_id = ?' : '') + ' ORDER BY q.erstellt_am DESC';
+  res.json(deal_id ? db.prepare(sql).all(deal_id) : db.prepare(sql).all());
+});
+
+app.get('/api/quotes/:id', (req, res) => {
+  const quote = db.prepare(quoteWithDeal + ' WHERE q.id = ?').get(req.params.id);
+  if (!quote) return res.status(404).json({ error: 'Angebot nicht gefunden' });
+  quote.items = db.prepare('SELECT * FROM quote_items WHERE quote_id = ? ORDER BY position').all(req.params.id);
+  res.json(quote);
+});
+
+function upsertQuoteItems(quoteId, items) {
+  db.prepare('DELETE FROM quote_items WHERE quote_id = ?').run(quoteId);
+  const ins = db.prepare(`
+    INSERT INTO quote_items (id, quote_id, position, bezeichnung, beschreibung, menge, einheit, einzelpreis, rabatt_proz)
+    VALUES (@id, @quote_id, @position, @bezeichnung, @beschreibung, @menge, @einheit, @einzelpreis, @rabatt_proz)
+  `);
+  items.forEach((it, i) => ins.run({
+    id: it.id || randomUUID(),
+    quote_id: quoteId,
+    position: i,
+    bezeichnung: it.bezeichnung,
+    beschreibung: it.beschreibung || null,
+    menge: it.menge ?? 1,
+    einheit: it.einheit || 'Stück',
+    einzelpreis: it.einzelpreis ?? 0,
+    rabatt_proz: it.rabatt_proz ?? 0,
+  }));
+}
+
+app.post('/api/quotes', (req, res) => {
+  const { id, titel, deal_id, status, gueltig_bis, waehrung, notizen, items = [] } = req.body;
+  if (!id || !titel) return res.status(400).json({ error: 'id und titel sind Pflichtfelder' });
+  db.transaction(() => {
+    db.prepare(`
+      INSERT INTO quotes (id, titel, deal_id, status, gueltig_bis, waehrung, notizen)
+      VALUES (@id, @titel, @deal_id, @status, @gueltig_bis, @waehrung, @notizen)
+    `).run({ id, titel, deal_id: deal_id || null, status: status || 'Entwurf', gueltig_bis: gueltig_bis || null, waehrung: waehrung || 'EUR', notizen: notizen || null });
+    upsertQuoteItems(id, items);
+  })();
+  const quote = db.prepare(quoteWithDeal + ' WHERE q.id = ?').get(id);
+  quote.items = db.prepare('SELECT * FROM quote_items WHERE quote_id = ? ORDER BY position').all(id);
+  res.status(201).json(quote);
+});
+
+app.put('/api/quotes/:id', (req, res) => {
+  const { titel, deal_id, status, gueltig_bis, waehrung, notizen, items = [] } = req.body;
+  if (!titel) return res.status(400).json({ error: 'titel ist ein Pflichtfeld' });
+  let notFound = false;
+  db.transaction(() => {
+    const r = db.prepare(`
+      UPDATE quotes SET titel=@titel, deal_id=@deal_id, status=@status,
+        gueltig_bis=@gueltig_bis, waehrung=@waehrung, notizen=@notizen, aktualisiert_am=datetime('now')
+      WHERE id=@id
+    `).run({ id: req.params.id, titel, deal_id: deal_id || null, status: status || 'Entwurf', gueltig_bis: gueltig_bis || null, waehrung: waehrung || 'EUR', notizen: notizen || null });
+    if (r.changes === 0) { notFound = true; return; }
+    upsertQuoteItems(req.params.id, items);
+  })();
+  if (notFound) return res.status(404).json({ error: 'Angebot nicht gefunden' });
+  const quote = db.prepare(quoteWithDeal + ' WHERE q.id = ?').get(req.params.id);
+  quote.items = db.prepare('SELECT * FROM quote_items WHERE quote_id = ? ORDER BY position').all(req.params.id);
+  res.json(quote);
+});
+
+app.delete('/api/quotes/:id', (req, res) => {
+  const r = db.prepare('DELETE FROM quotes WHERE id = ?').run(req.params.id);
+  if (r.changes === 0) return res.status(404).json({ error: 'Angebot nicht gefunden' });
   res.status(204).end();
 });
 

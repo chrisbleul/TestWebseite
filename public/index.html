@@ -133,6 +133,32 @@
 
     .wert-cell { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
 
+    /* Quote status badges */
+    .status-Entwurf    { background:#f1f5f9; color:#475569; }
+    .status-Gesendet   { background:#dbeafe; color:#1d4ed8; }
+    .status-Angenommen { background:#dcfce7; color:#166534; }
+    .status-Abgelehnt  { background:#fee2e2; color:#dc2626; }
+
+    /* Quote editor */
+    .qe-title-input { border:none; background:transparent; font-size:1.1rem; font-weight:600; color:var(--text); padding:4px 8px; border-radius:4px; min-width:200px; flex:1; max-width:480px; font-family:inherit; }
+    .qe-title-input:focus { outline:2px solid var(--primary); background:var(--bg); }
+    .qe-table { font-size:0.82rem; }
+    .qe-table th { font-size:0.72rem; }
+    .qe-table td { padding:5px 7px; vertical-align:top; }
+    .qe-table td:first-child, .qe-table td:last-child { vertical-align:middle; }
+    .qe-input { width:100%; padding:5px 7px; border:1px solid var(--border); border-radius:4px; font-size:0.82rem; background:var(--bg); font-family:inherit; color:var(--text); }
+    .qe-input:focus { outline:2px solid var(--primary); outline-offset:0; background:#fff; }
+    .qe-num { text-align:right; }
+    .qe-pos-cell { text-align:center; color:var(--text-muted); font-size:0.8rem; width:28px; padding:0 4px; vertical-align:middle !important; }
+    .qe-desc-input { margin-top:4px; color:var(--text-muted); font-size:0.78rem; }
+    .qe-add-row { padding:10px 16px; border-top:1px solid var(--border); }
+    .qe-totals { padding:14px 20px; display:flex; flex-direction:column; align-items:flex-end; gap:6px; border-top:1px solid var(--border); background:var(--bg); border-radius:0 0 8px 8px; }
+    .qe-total-row { display:flex; gap:32px; font-size:0.9rem; }
+    .qe-total-row span:first-child { color:var(--text-muted); min-width:130px; text-align:right; }
+    .qe-total-row span:last-child { min-width:110px; text-align:right; font-variant-numeric:tabular-nums; }
+    .qe-total-final { font-weight:700; font-size:1rem; border-top:2px solid var(--border); padding-top:8px; margin-top:2px; }
+    @media (max-width: 900px) { .qe-table .qe-desc-input { display:none; } }
+
     /* Mobile bottom nav */
     .mobile-nav { display: none; }
     @media (max-width: 640px) {
@@ -148,7 +174,7 @@
       td::before { content: attr(data-label); font-weight: 700; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 2px; }
 
       .mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: var(--sidebar-bg); border-top: 1px solid #334155; z-index: 50; }
-      .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 4px 10px; color: var(--sidebar-text); font-size: 0.65rem; gap: 3px; cursor: pointer; border: none; background: none; font-family: inherit; transition: color 0.15s; }
+      .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 2px 10px; color: var(--sidebar-text); font-size: 0.58rem; gap: 3px; cursor: pointer; border: none; background: none; font-family: inherit; transition: color 0.15s; }
       .mobile-nav-item .mobile-nav-icon { font-size: 1.3rem; line-height: 1; }
       .mobile-nav-item.active { color: #fff; }
       .mobile-nav-item.active .mobile-nav-icon { filter: drop-shadow(0 0 4px var(--primary)); }
@@ -168,6 +194,12 @@
     </div>
     <div class="nav-item" id="nav-deals" onclick="showView('deals')">
       <span class="nav-icon">💼</span> Deals
+    </div>
+    <div class="nav-item" id="nav-quotes" onclick="showView('quotes')">
+      <span class="nav-icon">📄</span> Angebote
+    </div>
+    <div class="nav-item" id="nav-products" onclick="showView('products')">
+      <span class="nav-icon">📦</span> Produkte
     </div>
     <div class="nav-item disabled"><span class="nav-icon">📈</span> Berichte</div>
   </nav>
@@ -276,6 +308,153 @@
           </tr></thead>
           <tbody id="dealTableBody"></tbody>
         </table>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── Produkte-View ── -->
+  <section id="view-products" style="display:none">
+    <header class="topbar">
+      <h1>Produktkatalog</h1>
+      <div class="topbar-right">
+        <input class="search-input" id="productSearch" placeholder="Suchen …" oninput="renderProductTable()">
+        <button class="btn btn-ghost" onclick="exportCSV('products')" title="Als CSV exportieren">↓ CSV</button>
+        <button class="btn btn-primary" onclick="openProductModal()">+ Neuer Artikel</button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Artikel gesamt</div><div class="stat-value" id="statProducts">0</div></div>
+        <div class="stat-card"><div class="stat-label">Ø Preis</div><div class="stat-value" id="statProductsAvg" style="font-size:1rem;padding-top:4px">–</div></div>
+        <div class="stat-card"><div class="stat-label">Einheiten</div><div class="stat-value" id="statProductsUnits">–</div></div>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead><tr>
+            <th class="sortable" id="th-p-name" onclick="sortProducts('name')">Bezeichnung<span class="sort-icon"></span></th>
+            <th>Beschreibung</th>
+            <th class="sortable wert-cell" id="th-p-preis" onclick="sortProducts('preis')">Preis<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-p-einheit" onclick="sortProducts('einheit')">Einheit<span class="sort-icon"></span></th>
+            <th></th>
+          </tr></thead>
+          <tbody id="productTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Angebote-View ── -->
+  <section id="view-quotes" style="display:none">
+    <header class="topbar">
+      <h1>Angebote</h1>
+      <div class="topbar-right">
+        <input class="search-input" id="quoteSearch" placeholder="Suchen …" oninput="renderQuoteTable()">
+        <button class="btn btn-primary" onclick="openQuoteEditor()">+ Neues Angebot</button>
+      </div>
+    </header>
+    <div class="filter-bar" id="quoteFilterBar">
+      <button class="filter-btn active" onclick="setQuoteFilter('')">Alle</button>
+      <button class="filter-btn" onclick="setQuoteFilter('Entwurf')">Entwurf</button>
+      <button class="filter-btn" onclick="setQuoteFilter('Gesendet')">Gesendet</button>
+      <button class="filter-btn" onclick="setQuoteFilter('Angenommen')">Angenommen</button>
+      <button class="filter-btn" onclick="setQuoteFilter('Abgelehnt')">Abgelehnt</button>
+    </div>
+    <div class="content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Angebote gesamt</div><div class="stat-value" id="statQuotes">0</div></div>
+        <div class="stat-card"><div class="stat-label">Angenommen (Wert)</div><div class="stat-value" id="statQuotesWon" style="font-size:1rem;padding-top:4px">–</div></div>
+        <div class="stat-card"><div class="stat-label">Konversionsrate</div><div class="stat-value" id="statQuotesRate">–</div></div>
+        <div class="stat-card"><div class="stat-label">Gesamtvolumen</div><div class="stat-value" id="statQuotesVol" style="font-size:1rem;padding-top:4px">–</div></div>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead><tr>
+            <th class="sortable" id="th-q-titel" onclick="sortQuotes('titel')">Titel<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-q-deal_titel" onclick="sortQuotes('deal_titel')">Deal<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-q-status" onclick="sortQuotes('status')">Status<span class="sort-icon"></span></th>
+            <th class="sortable" id="th-q-gueltig_bis" onclick="sortQuotes('gueltig_bis')">Gültig bis<span class="sort-icon"></span></th>
+            <th class="sortable wert-cell" id="th-q-gesamtwert" onclick="sortQuotes('gesamtwert')">Gesamt netto<span class="sort-icon"></span></th>
+            <th></th>
+          </tr></thead>
+          <tbody id="quoteTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Angebot-Editor ── -->
+  <section id="view-quote-editor" style="display:none">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        <button class="btn btn-ghost" onclick="showView('quotes')">← Angebote</button>
+        <input id="qe-titel" class="qe-title-input" placeholder="Angebotstitel …" required>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="saveQuote()">Speichern</button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="table-card" style="padding:16px 20px;margin-bottom:20px">
+        <div class="form-row" style="flex-wrap:wrap;margin-bottom:0">
+          <div class="form-group" style="margin-bottom:0">
+            <label for="qe-deal">Deal</label>
+            <select id="qe-deal"><option value="">– kein Deal –</option></select>
+          </div>
+          <div class="form-group" style="flex:0 0 150px;margin-bottom:0">
+            <label for="qe-status">Status</label>
+            <select id="qe-status">
+              <option value="Entwurf">Entwurf</option>
+              <option value="Gesendet">Gesendet</option>
+              <option value="Angenommen">Angenommen</option>
+              <option value="Abgelehnt">Abgelehnt</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:0 0 110px;margin-bottom:0">
+            <label for="qe-waehrung">Währung</label>
+            <select id="qe-waehrung" onchange="recalcQeTotals()">
+              <option value="EUR">EUR €</option>
+              <option value="USD">USD $</option>
+              <option value="GBP">GBP £</option>
+              <option value="CHF">CHF</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:0 0 160px;margin-bottom:0">
+            <label for="qe-gueltig">Gültig bis</label>
+            <input type="date" id="qe-gueltig">
+          </div>
+        </div>
+      </div>
+      <div class="table-card" style="margin-bottom:20px">
+        <div style="overflow-x:auto">
+          <table class="qe-table">
+            <thead><tr>
+              <th style="width:28px">#</th>
+              <th>Bezeichnung / Beschreibung</th>
+              <th style="width:72px">Menge</th>
+              <th style="width:100px">Einheit</th>
+              <th style="width:112px">Einzelpreis</th>
+              <th style="width:72px">Rabatt %</th>
+              <th class="wert-cell" style="width:120px">Gesamt</th>
+              <th style="width:36px"></th>
+            </tr></thead>
+            <tbody id="qe-items-body"></tbody>
+          </table>
+        </div>
+        <div class="qe-add-row">
+          <button class="btn btn-ghost" onclick="addQeItem()">+ Position hinzufügen</button>
+        </div>
+        <div class="qe-totals">
+          <div class="qe-total-row"><span>Zwischensumme</span><span id="qe-subtotal">–</span></div>
+          <div class="qe-total-row"><span>Rabatt gesamt</span><span id="qe-discount">–</span></div>
+          <div class="qe-total-row qe-total-final"><span>Gesamt netto</span><span id="qe-total">–</span></div>
+        </div>
+      </div>
+      <div class="table-card" style="padding:16px 20px">
+        <div class="form-group" style="margin-bottom:0">
+          <label for="qe-notizen">Notizen</label>
+          <textarea id="qe-notizen" placeholder="Interne Notizen …" rows="3"></textarea>
+        </div>
       </div>
     </div>
   </section>
@@ -416,12 +595,72 @@
     <span class="mobile-nav-icon">👥</span>Kontakte
   </button>
   <button class="mobile-nav-item" id="mnav-companies" onclick="showView('companies')">
-    <span class="mobile-nav-icon">🏢</span>Unternehmen
+    <span class="mobile-nav-icon">🏢</span>Firmen
   </button>
   <button class="mobile-nav-item" id="mnav-deals" onclick="showView('deals')">
     <span class="mobile-nav-icon">💼</span>Deals
   </button>
+  <button class="mobile-nav-item" id="mnav-quotes" onclick="showView('quotes')">
+    <span class="mobile-nav-icon">📄</span>Angebote
+  </button>
+  <button class="mobile-nav-item" id="mnav-products" onclick="showView('products')">
+    <span class="mobile-nav-icon">📦</span>Produkte
+  </button>
 </nav>
+
+<datalist id="einheiten-datalist">
+  <option value="Stück">
+  <option value="Monat">
+  <option value="Jahr">
+  <option value="Stunde">
+  <option value="Tag">
+  <option value="Lizenz">
+  <option value="Pauschal">
+  <option value="m²">
+  <option value="km">
+  <option value="lfd. m">
+</datalist>
+<datalist id="products-datalist"></datalist>
+
+<!-- ── Produkt-Modal ── -->
+<div class="modal-overlay" id="productModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+    <div class="modal-header">
+      <h2 id="productModalTitle">Neuer Artikel</h2>
+      <button class="modal-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="productForm" onsubmit="saveProduct(event)">
+        <input type="hidden" id="productId">
+        <div class="form-group"><label for="p-name">Bezeichnung *</label><input type="text" id="p-name" placeholder="z.B. Beratung Pro" required></div>
+        <div class="form-group"><label for="p-beschreibung">Beschreibung</label><textarea id="p-beschreibung" placeholder="Kurzbeschreibung …" rows="2"></textarea></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="p-preis">Preis</label>
+            <input type="number" id="p-preis" placeholder="99.00" min="0" step="0.01">
+          </div>
+          <div class="form-group" style="flex:0 0 110px">
+            <label for="p-waehrung">Währung</label>
+            <select id="p-waehrung">
+              <option value="EUR">EUR €</option>
+              <option value="USD">USD $</option>
+              <option value="GBP">GBP £</option>
+              <option value="CHF">CHF</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="p-einheit">Einheit</label>
+            <input type="text" id="p-einheit" list="einheiten-datalist" placeholder="Stück">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeProductModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="document.getElementById('productForm').requestSubmit()">Speichern</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Löschen-Bestätigung ── -->
 <div class="confirm-overlay" id="confirmOverlay">
@@ -440,6 +679,8 @@
   let allContacts = [];
   let allCompanies = [];
   let allDeals     = [];
+  let allProducts  = [];
+  let allQuotes    = [];
   let deleteTargetId = null;
   let deleteTargetType = null;
   let showOnlyFavorites = false;
@@ -447,6 +688,11 @@
   let companySort = { key: 'name', dir: 1 };
   let dealSort    = { key: 'erstellt_am', dir: -1 };
   let dealStatusFilter = '';
+  let productSort = { key: 'name', dir: 1 };
+  let quoteSort   = { key: 'erstellt_am', dir: -1 };
+  let quoteStatusFilter = '';
+  let qeState = null;   // { id, isNew }
+  let qeItems = [];     // line items being edited
 
   const DEAL_STATUS = {
     offen:          { label: 'Offen',          cls: 'status-offen' },
@@ -478,15 +724,19 @@
 
   // ── View switching ───────────────────────────
   function showView(view) {
-    document.getElementById('view-contacts').style.display  = view === 'contacts'  ? '' : 'none';
-    document.getElementById('view-companies').style.display = view === 'companies' ? '' : 'none';
-    document.getElementById('view-deals').style.display     = view === 'deals'     ? '' : 'none';
-    ['contacts','companies','deals'].forEach(v => {
-      document.getElementById(`nav-${v}`).classList.toggle('active', v === view);
-      document.getElementById(`mnav-${v}`).classList.toggle('active', v === view);
+    ['contacts','companies','deals','products','quotes','quote-editor'].forEach(v => {
+      const el = document.getElementById(`view-${v}`);
+      if (el) el.style.display = v === view ? '' : 'none';
+    });
+    const navActive = view === 'quote-editor' ? 'quotes' : view;
+    ['contacts','companies','deals','products','quotes'].forEach(v => {
+      document.getElementById(`nav-${v}`)?.classList.toggle('active', v === navActive);
+      document.getElementById(`mnav-${v}`)?.classList.toggle('active', v === navActive);
     });
     if (view === 'companies') loadCompanies();
     if (view === 'deals') loadDeals();
+    if (view === 'products') loadProducts();
+    if (view === 'quotes') loadQuotes();
   }
 
   // ── Contacts ────────────────────────────────
@@ -745,6 +995,8 @@
           <td data-label="Status"><span class="badge ${st.cls}">${st.label}</span></td>
           <td data-label="Abschlussdatum">${fmtDate(d.abschluss_datum)}</td>
           <td data-label="Aktionen"><div class="actions">
+            <button class="btn-icon" onclick="filterQuotesByDeal('${d.id}','${esc(d.titel)}')" title="Angebote anzeigen">📄 ${d.angebote_count||0}</button>
+            <button class="btn-icon" onclick="openQuoteEditor(null,'${d.id}')" title="Neues Angebot">+ Angebot</button>
             <button class="btn-icon" onclick="openDealModal('${d.id}')">✏️ Bearbeiten</button>
             <button class="btn-icon delete" onclick="askDelete('${d.id}','${esc(d.titel)}','deal')">🗑️</button>
           </div></td>
@@ -893,8 +1145,8 @@
   // ── Delete ──────────────────────────────────
   function askDelete(id, name, type) {
     deleteTargetId = id; deleteTargetType = type;
-    const typeLabel = type === 'company' ? 'Unternehmen' : type === 'deal' ? 'Deal' : 'Kontakt';
-    document.getElementById('confirmText').textContent = `${typeLabel} „${name}" wird unwiderruflich gelöscht.`;
+    const labels = { company: 'Unternehmen', deal: 'Deal', product: 'Artikel', quote: 'Angebot', contact: 'Kontakt' };
+    document.getElementById('confirmText').textContent = `${labels[type]||'Eintrag'} „${name}" wird unwiderruflich gelöscht.`;
     document.getElementById('confirmOverlay').classList.add('open');
   }
   function closeConfirm() {
@@ -903,11 +1155,13 @@
   }
   async function confirmDelete() {
     if (!deleteTargetId) return;
-    const endpoint = deleteTargetType === 'company' ? 'companies' : deleteTargetType === 'deal' ? 'deals' : 'contacts';
-    await fetch(`/api/${endpoint}/${deleteTargetId}`, { method: 'DELETE' });
+    const endpoints = { company: 'companies', deal: 'deals', product: 'products', quote: 'quotes', contact: 'contacts' };
+    await fetch(`/api/${endpoints[deleteTargetType]||'contacts'}/${deleteTargetId}`, { method: 'DELETE' });
     closeConfirm();
     if (deleteTargetType === 'company') await loadCompanies();
     else if (deleteTargetType === 'deal') await loadDeals();
+    else if (deleteTargetType === 'product') await loadProducts();
+    else if (deleteTargetType === 'quote') await loadQuotes();
     else await loadContacts();
   }
 
@@ -924,11 +1178,21 @@
       headers = ['Name','Branche','Mitarbeiter','Website','Straße','PLZ','Ort','Land','Notizen','Erstellt am'];
       fields  = ['name','branche','mitarbeiter','website','strasse','plz','ort','land','notizen','erstellt_am'];
       filename = 'unternehmen';
-    } else {
+    } else if (type === 'deals') {
       data = allDeals;
       headers = ['Titel','Unternehmen','Ansprechpartner','Wert','Währung','Status','Abschlussdatum','Notizen','Erstellt am'];
       fields  = ['titel','unternehmen','kontakt_name','wert','waehrung','status','abschluss_datum','notizen','erstellt_am'];
       filename = 'deals';
+    } else if (type === 'products') {
+      data = allProducts;
+      headers = ['Bezeichnung','Beschreibung','Preis','Währung','Einheit','Erstellt am'];
+      fields  = ['name','beschreibung','preis','waehrung','einheit','erstellt_am'];
+      filename = 'produkte';
+    } else {
+      data = allQuotes;
+      headers = ['Titel','Deal','Status','Gültig bis','Gesamt netto','Währung','Erstellt am'];
+      fields  = ['titel','deal_titel','status','gueltig_bis','gesamtwert','waehrung','erstellt_am'];
+      filename = 'angebote';
     }
     const csv = [
       headers.join(';'),
@@ -943,19 +1207,354 @@
   }
 
   // ── Events ──────────────────────────────────
-  ['contactModalOverlay','companyModalOverlay','dealModalOverlay','confirmOverlay'].forEach(id => {
+  ['contactModalOverlay','companyModalOverlay','dealModalOverlay','productModalOverlay','confirmOverlay'].forEach(id => {
     document.getElementById(id).addEventListener('click', e => {
       if (e.target === e.currentTarget) {
         if (id === 'contactModalOverlay') closeContactModal();
         else if (id === 'companyModalOverlay') closeCompanyModal();
         else if (id === 'dealModalOverlay') closeDealModal();
+        else if (id === 'productModalOverlay') closeProductModal();
         else closeConfirm();
       }
     });
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeContactModal(); closeCompanyModal(); closeDealModal(); closeConfirm(); }
+    if (e.key === 'Escape') { closeContactModal(); closeCompanyModal(); closeDealModal(); closeProductModal(); closeConfirm(); }
   });
+
+  // ── Products ─────────────────────────────────
+  async function loadProducts() {
+    allProducts = await fetch('/api/products').then(r => r.json());
+    renderProductTable();
+  }
+
+  function sortProducts(key) {
+    if (productSort.key === key) productSort.dir *= -1;
+    else { productSort.key = key; productSort.dir = 1; }
+    renderProductTable();
+  }
+
+  function renderProductTable() {
+    const q = (document.getElementById('productSearch')?.value || '').toLowerCase();
+    let filtered = allProducts.filter(p =>
+      [p.name, p.beschreibung, p.einheit].some(v => (v||'').toLowerCase().includes(q))
+    );
+    const { key, dir } = productSort;
+    filtered = [...filtered].sort((a, b) => {
+      const av = key === 'preis' ? (a.preis || 0) : (a[key] || '');
+      const bv = key === 'preis' ? (b.preis || 0) : (b[key] || '');
+      if (typeof av === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv), 'de') * dir;
+    });
+    ['name','preis','einheit'].forEach(k => {
+      const el = document.getElementById(`th-p-${k}`);
+      if (!el) return;
+      el.classList.remove('sort-asc','sort-desc');
+      if (productSort.key === k) el.classList.add(dir === 1 ? 'sort-asc' : 'sort-desc');
+    });
+    const tbody = document.getElementById('productTableBody');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <p>${q ? 'Keine Treffer für „'+esc(q)+'"' : 'Noch keine Artikel im Katalog.'}</p>
+        ${!q ? '<button class="btn btn-primary" onclick="openProductModal()">+ Ersten Artikel hinzufügen</button>' : ''}
+      </div></td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map(p => `<tr>
+        <td data-label="Bezeichnung"><div class="name-cell">
+          <div class="avatar" style="background:${avatarColor(p.name)}">${(p.name[0]||'').toUpperCase()}</div>
+          <div class="name-cell-main">${esc(p.name)}</div>
+        </div></td>
+        <td data-label="Beschreibung" style="color:var(--text-muted);font-size:0.85rem">${esc(p.beschreibung||'–')}</td>
+        <td data-label="Preis" class="wert-cell">${fmtCurrency(p.preis, p.waehrung)}</td>
+        <td data-label="Einheit"><span class="badge">${esc(p.einheit||'Stück')}</span></td>
+        <td data-label="Aktionen"><div class="actions">
+          <button class="btn-icon" onclick="openProductModal('${p.id}')">✏️ Bearbeiten</button>
+          <button class="btn-icon delete" onclick="askDelete('${p.id}','${esc(p.name)}','product')">🗑️</button>
+        </div></td>
+      </tr>`).join('');
+    }
+    document.getElementById('statProducts').textContent = allProducts.length;
+    const avg = allProducts.length ? allProducts.reduce((s,p) => s+(p.preis||0), 0) / allProducts.length : null;
+    document.getElementById('statProductsAvg').textContent = avg !== null ? fmtCurrency(avg, 'EUR') : '–';
+    document.getElementById('statProductsUnits').textContent = new Set(allProducts.map(p=>p.einheit).filter(Boolean)).size || '–';
+  }
+
+  function openProductModal(id = null) {
+    document.getElementById('productForm').reset();
+    document.getElementById('productId').value = '';
+    document.getElementById('productModalTitle').textContent = 'Neuer Artikel';
+    if (id) {
+      const p = allProducts.find(p => p.id === id); if (!p) return;
+      document.getElementById('productModalTitle').textContent = 'Artikel bearbeiten';
+      document.getElementById('productId').value = p.id;
+      document.getElementById('p-name').value = p.name || '';
+      document.getElementById('p-beschreibung').value = p.beschreibung || '';
+      document.getElementById('p-preis').value = p.preis ?? '';
+      document.getElementById('p-waehrung').value = p.waehrung || 'EUR';
+      document.getElementById('p-einheit').value = p.einheit || 'Stück';
+    }
+    document.getElementById('productModalOverlay').classList.add('open');
+    document.getElementById('p-name').focus();
+  }
+
+  function closeProductModal() { document.getElementById('productModalOverlay').classList.remove('open'); }
+
+  async function saveProduct(event) {
+    event.preventDefault();
+    const id = document.getElementById('productId').value;
+    const preis = document.getElementById('p-preis').value;
+    const data = {
+      id: id || crypto.randomUUID(),
+      name: document.getElementById('p-name').value.trim(),
+      beschreibung: document.getElementById('p-beschreibung').value.trim(),
+      preis: preis !== '' ? parseFloat(preis) : 0,
+      waehrung: document.getElementById('p-waehrung').value,
+      einheit: document.getElementById('p-einheit').value.trim() || 'Stück',
+    };
+    await fetch(id ? `/api/products/${id}` : '/api/products', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    closeProductModal();
+    await loadProducts();
+    // Refresh datalist for quote editor
+    document.getElementById('products-datalist').innerHTML = allProducts.map(p => `<option value="${esc(p.name)}">`).join('');
+  }
+
+  // ── Quotes ───────────────────────────────────
+  const QUOTE_STATUS = {
+    Entwurf:    { label: 'Entwurf',    cls: 'status-Entwurf' },
+    Gesendet:   { label: 'Gesendet',   cls: 'status-Gesendet' },
+    Angenommen: { label: 'Angenommen', cls: 'status-Angenommen' },
+    Abgelehnt:  { label: 'Abgelehnt',  cls: 'status-Abgelehnt' },
+  };
+
+  async function loadQuotes() {
+    allQuotes = await fetch('/api/quotes').then(r => r.json());
+    renderQuoteTable();
+  }
+
+  function sortQuotes(key) {
+    if (quoteSort.key === key) quoteSort.dir *= -1;
+    else { quoteSort.key = key; quoteSort.dir = 1; }
+    renderQuoteTable();
+  }
+
+  function setQuoteFilter(status) {
+    quoteStatusFilter = status;
+    document.querySelectorAll('#quoteFilterBar .filter-btn').forEach(btn => {
+      const attr = btn.getAttribute('onclick');
+      btn.classList.toggle('active', attr === `setQuoteFilter('${status}')` || (status === '' && attr === "setQuoteFilter('')"));
+    });
+    renderQuoteTable();
+  }
+
+  function renderQuoteTable() {
+    const q = (document.getElementById('quoteSearch')?.value || '').toLowerCase();
+    let filtered = allQuotes.filter(qt => {
+      if (quoteStatusFilter && qt.status !== quoteStatusFilter) return false;
+      return [qt.titel, qt.deal_titel].some(v => (v||'').toLowerCase().includes(q));
+    });
+    const { key, dir } = quoteSort;
+    filtered = [...filtered].sort((a, b) => {
+      if (key === 'gesamtwert') return ((a.gesamtwert ?? -1) - (b.gesamtwert ?? -1)) * dir;
+      return String(a[key]??'').localeCompare(String(b[key]??''), 'de') * dir;
+    });
+    ['titel','deal_titel','status','gueltig_bis','gesamtwert'].forEach(k => {
+      const el = document.getElementById(`th-q-${k}`);
+      if (!el) return;
+      el.classList.remove('sort-asc','sort-desc');
+      if (quoteSort.key === k) el.classList.add(dir === 1 ? 'sort-asc' : 'sort-desc');
+    });
+    const tbody = document.getElementById('quoteTableBody');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">
+        <div class="empty-icon">📄</div>
+        <p>${q || quoteStatusFilter ? 'Keine Treffer.' : 'Noch keine Angebote erstellt.'}</p>
+        ${!q && !quoteStatusFilter ? '<button class="btn btn-primary" onclick="openQuoteEditor()">+ Erstes Angebot erstellen</button>' : ''}
+      </div></td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map(qt => {
+        const st = QUOTE_STATUS[qt.status] || { label: qt.status, cls: '' };
+        return `<tr>
+          <td data-label="Titel"><div class="name-cell-main">${esc(qt.titel)}</div>
+            <div class="name-cell-sub">${qt.positionen} Position${qt.positionen != 1 ? 'en' : ''}</div></td>
+          <td data-label="Deal">${qt.deal_titel ? `<span class="badge">${esc(qt.deal_titel)}</span>` : '–'}</td>
+          <td data-label="Status"><span class="badge ${st.cls}">${st.label}</span></td>
+          <td data-label="Gültig bis">${fmtDate(qt.gueltig_bis)}</td>
+          <td data-label="Gesamt netto" class="wert-cell">${fmtCurrency(qt.gesamtwert, qt.waehrung)}</td>
+          <td data-label="Aktionen"><div class="actions">
+            <button class="btn-icon" onclick="openQuoteEditor('${qt.id}')">✏️ Bearbeiten</button>
+            <button class="btn-icon delete" onclick="askDelete('${qt.id}','${esc(qt.titel)}','quote')">🗑️</button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+    document.getElementById('statQuotes').textContent = allQuotes.length;
+    const won = allQuotes.filter(qt => qt.status === 'Angenommen');
+    const wonVal = won.reduce((s, qt) => s + (qt.gesamtwert || 0), 0);
+    document.getElementById('statQuotesWon').textContent = won.length ? fmtCurrency(wonVal, 'EUR') : '–';
+    const closed = allQuotes.filter(qt => qt.status === 'Angenommen' || qt.status === 'Abgelehnt').length;
+    document.getElementById('statQuotesRate').textContent = closed ? Math.round(won.length / closed * 100) + ' %' : '–';
+    const vol = allQuotes.reduce((s, qt) => s + (qt.gesamtwert || 0), 0);
+    document.getElementById('statQuotesVol').textContent = allQuotes.length ? fmtCurrency(vol, 'EUR') : '–';
+  }
+
+  function filterQuotesByDeal(dealId, dealTitel) {
+    showView('quotes');
+    document.getElementById('quoteSearch').value = dealTitel;
+    renderQuoteTable();
+  }
+
+  // ── Quote Editor ─────────────────────────────
+  function getQeWaehrung() { return document.getElementById('qe-waehrung')?.value || 'EUR'; }
+
+  async function openQuoteEditor(quoteId = null, prefillDealId = null) {
+    if (allDeals.length === 0) allDeals = await fetch('/api/deals').then(r => r.json());
+    if (allProducts.length === 0) allProducts = await fetch('/api/products').then(r => r.json());
+
+    document.getElementById('qe-deal').innerHTML =
+      '<option value="">– kein Deal –</option>' +
+      allDeals.map(d => `<option value="${esc(d.id)}">${esc(d.titel)}</option>`).join('');
+
+    document.getElementById('products-datalist').innerHTML =
+      allProducts.map(p => `<option value="${esc(p.name)}">`).join('');
+
+    if (quoteId) {
+      const quote = await fetch(`/api/quotes/${quoteId}`).then(r => r.json());
+      qeState = { id: quoteId, isNew: false };
+      document.getElementById('qe-titel').value = quote.titel;
+      document.getElementById('qe-deal').value = quote.deal_id || '';
+      document.getElementById('qe-status').value = quote.status;
+      document.getElementById('qe-waehrung').value = quote.waehrung;
+      document.getElementById('qe-gueltig').value = quote.gueltig_bis || '';
+      document.getElementById('qe-notizen').value = quote.notizen || '';
+      qeItems = quote.items.map(it => ({ ...it }));
+    } else {
+      qeState = { id: crypto.randomUUID(), isNew: true };
+      document.getElementById('qe-titel').value = '';
+      document.getElementById('qe-deal').value = prefillDealId || '';
+      document.getElementById('qe-status').value = 'Entwurf';
+      document.getElementById('qe-waehrung').value = 'EUR';
+      document.getElementById('qe-gueltig').value = '';
+      document.getElementById('qe-notizen').value = '';
+      qeItems = [];
+      addQeItem();
+    }
+
+    renderQeItemsTable();
+    showView('quote-editor');
+    document.getElementById('qe-titel').focus();
+  }
+
+  function renderQeItemsTable() {
+    document.getElementById('qe-items-body').innerHTML = qeItems.map((it, i) => `
+      <tr>
+        <td class="qe-pos-cell">${i + 1}</td>
+        <td>
+          <input id="qe-bez-${i}" class="qe-input" type="text" list="products-datalist"
+            value="${esc(it.bezeichnung||'')}" placeholder="Bezeichnung *"
+            oninput="qeItems[${i}].bezeichnung=this.value;onQeProductMatch(${i},this.value)">
+          <input id="qe-desc-${i}" class="qe-input qe-desc-input" type="text"
+            value="${esc(it.beschreibung||'')}" placeholder="Beschreibung (optional)"
+            oninput="qeItems[${i}].beschreibung=this.value">
+        </td>
+        <td><input id="qe-menge-${i}" class="qe-input qe-num" type="number" min="0" step="any"
+          value="${it.menge??1}"
+          oninput="qeItems[${i}].menge=+this.value;recalcQeRow(${i})"></td>
+        <td><input id="qe-einheit-${i}" class="qe-input" type="text" list="einheiten-datalist"
+          value="${esc(it.einheit||'Stück')}"
+          oninput="qeItems[${i}].einheit=this.value"></td>
+        <td><input id="qe-preis-${i}" class="qe-input qe-num" type="number" min="0" step="0.01"
+          value="${it.einzelpreis??0}"
+          oninput="qeItems[${i}].einzelpreis=+this.value;recalcQeRow(${i})"></td>
+        <td><input id="qe-rabatt-${i}" class="qe-input qe-num" type="number" min="0" max="100" step="0.1"
+          value="${it.rabatt_proz??0}"
+          oninput="qeItems[${i}].rabatt_proz=+this.value;recalcQeRow(${i})"></td>
+        <td class="wert-cell" id="qe-rt-${i}">–</td>
+        <td><button class="btn-icon delete" style="padding:3px 7px" onclick="removeQeItem(${i})">✕</button></td>
+      </tr>`).join('');
+    qeItems.forEach((_, i) => recalcQeRow(i));
+  }
+
+  function addQeItem() {
+    qeItems.push({ id: crypto.randomUUID(), bezeichnung: '', beschreibung: '', menge: 1, einheit: 'Stück', einzelpreis: 0, rabatt_proz: 0 });
+    renderQeItemsTable();
+    const inputs = document.querySelectorAll('[id^="qe-bez-"]');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+
+  function removeQeItem(idx) {
+    qeItems.splice(idx, 1);
+    renderQeItemsTable();
+  }
+
+  function onQeProductMatch(idx, val) {
+    const prod = allProducts.find(p => p.name.toLowerCase() === val.trim().toLowerCase());
+    if (!prod) return;
+    qeItems[idx].einheit = prod.einheit;
+    qeItems[idx].einzelpreis = prod.preis;
+    const e = document.getElementById(`qe-einheit-${idx}`);
+    const p = document.getElementById(`qe-preis-${idx}`);
+    if (e) e.value = prod.einheit;
+    if (p) p.value = prod.preis;
+    recalcQeRow(idx);
+  }
+
+  function recalcQeRow(i) {
+    const it = qeItems[i];
+    if (!it) return;
+    const gesamt = (it.menge || 0) * (it.einzelpreis || 0) * (1 - (it.rabatt_proz || 0) / 100);
+    const el = document.getElementById(`qe-rt-${i}`);
+    if (el) el.textContent = fmtCurrency(gesamt, getQeWaehrung());
+    recalcQeTotals();
+  }
+
+  function recalcQeTotals() {
+    const cur = getQeWaehrung();
+    let sub = 0, disc = 0;
+    qeItems.forEach(it => {
+      const gross = (it.menge || 0) * (it.einzelpreis || 0);
+      sub += gross;
+      disc += gross * (it.rabatt_proz || 0) / 100;
+    });
+    document.getElementById('qe-subtotal').textContent = fmtCurrency(sub, cur);
+    document.getElementById('qe-discount').textContent = fmtCurrency(disc, cur);
+    document.getElementById('qe-total').textContent = fmtCurrency(sub - disc, cur);
+  }
+
+  async function saveQuote() {
+    const titel = document.getElementById('qe-titel').value.trim();
+    if (!titel) { document.getElementById('qe-titel').focus(); return; }
+    const items = qeItems.filter(it => (it.bezeichnung||'').trim()).map(it => ({
+      id: it.id,
+      bezeichnung: it.bezeichnung.trim(),
+      beschreibung: (it.beschreibung || '').trim(),
+      menge: it.menge || 1,
+      einheit: it.einheit || 'Stück',
+      einzelpreis: it.einzelpreis || 0,
+      rabatt_proz: it.rabatt_proz || 0,
+    }));
+    const body = {
+      titel,
+      deal_id: document.getElementById('qe-deal').value || null,
+      status: document.getElementById('qe-status').value,
+      gueltig_bis: document.getElementById('qe-gueltig').value || null,
+      waehrung: document.getElementById('qe-waehrung').value || 'EUR',
+      notizen: document.getElementById('qe-notizen').value.trim(),
+      items,
+    };
+    const { id, isNew } = qeState;
+    await fetch(isNew ? '/api/quotes' : `/api/quotes/${id}`, {
+      method: isNew ? 'POST' : 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(isNew ? { id, ...body } : body),
+    });
+    showView('quotes');
+    await loadQuotes();
+  }
 
   loadContacts();
 </script>
