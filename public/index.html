@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CRM – Kontakte</title>
+  <title>SimpleCRM</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -15,361 +15,101 @@
       --bg: #f1f5f9;
       --sidebar-bg: #1e293b;
       --sidebar-text: #94a3b8;
-      --sidebar-active: #2563eb;
       --card-bg: #ffffff;
       --border: #e2e8f0;
       --text: #1e293b;
       --text-muted: #64748b;
     }
 
-    body {
-      font-family: Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      min-height: 100vh;
-    }
+    body { font-family: Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
 
-    /* ── Sidebar ── */
-    .sidebar {
-      width: 220px;
-      background: var(--sidebar-bg);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-    }
-
-    .sidebar-logo {
-      padding: 24px 20px 20px;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #fff;
-      border-bottom: 1px solid #334155;
-    }
-
+    /* Sidebar */
+    .sidebar { width: 220px; background: var(--sidebar-bg); display: flex; flex-direction: column; flex-shrink: 0; position: fixed; top: 0; left: 0; bottom: 0; }
+    .sidebar-logo { padding: 24px 20px 20px; font-size: 1.2rem; font-weight: 700; color: #fff; border-bottom: 1px solid #334155; }
     .sidebar-logo span { color: var(--primary); }
-
     .sidebar-nav { padding: 16px 0; flex: 1; }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 20px;
-      color: var(--sidebar-text);
-      font-size: 0.9rem;
-      cursor: pointer;
-      border-left: 3px solid transparent;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .nav-item.active {
-      color: #fff;
-      background: rgba(37, 99, 235, 0.15);
-      border-left-color: var(--sidebar-active);
-    }
-
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: var(--sidebar-text); font-size: 0.9rem; cursor: pointer; border-left: 3px solid transparent; transition: background 0.15s, color 0.15s; user-select: none; }
+    .nav-item.active { color: #fff; background: rgba(37,99,235,0.15); border-left-color: var(--primary); }
+    .nav-item.disabled { opacity: 0.4; cursor: default; }
     .nav-icon { font-size: 1rem; width: 18px; text-align: center; }
 
-    /* ── Main ── */
-    .main {
-      margin-left: 220px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .topbar {
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .topbar h1 { font-size: 1.25rem; color: var(--text); }
-
+    /* Main */
+    .main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; }
+    .topbar { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .topbar h1 { font-size: 1.25rem; }
     .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .search-input { padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.875rem; font-family: inherit; width: 220px; background: var(--bg); }
+    .search-input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
 
-    .search-input {
-      padding: 8px 14px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-family: inherit;
-      width: 220px;
-      background: var(--bg);
-    }
-
-    .search-input:focus {
-      outline: 2px solid var(--primary);
-      outline-offset: 1px;
-    }
-
-    .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      font-family: inherit;
-    }
-
+    /* Buttons */
+    .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.15s; font-family: inherit; }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
     .btn-danger { background: var(--danger); color: #fff; }
     .btn-danger:hover { background: var(--danger-dark); }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-    }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
     .btn-ghost:hover { background: var(--bg); }
 
-    /* ── Content ── */
+    /* Content */
     .content { padding: 24px 28px; flex: 1; }
-
-    .stats-row {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 20px;
-      flex: 1;
-    }
-
+    .stats-row { display: flex; gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; flex: 1; }
     .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
-    .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--text); }
+    .stat-value { font-size: 1.6rem; font-weight: 700; }
 
-    /* ── Table ── */
-    .table-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-    }
-
-    thead th {
-      background: var(--bg);
-      padding: 11px 16px;
-      text-align: left;
-      font-size: 0.78rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-    }
-
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
-    }
-
+    /* Table */
+    .table-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    thead th { background: var(--bg); padding: 11px 16px; text-align: left; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: #f8fafc; }
-
     td { padding: 12px 16px; vertical-align: middle; }
 
-    .contact-avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      background: var(--primary);
-      color: #fff;
-      font-weight: 700;
-      font-size: 0.8rem;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .contact-name-cell {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .contact-name { font-weight: 600; }
-    .contact-company { font-size: 0.8rem; color: var(--text-muted); }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-
+    .avatar { width: 34px; height: 34px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .name-cell { display: flex; align-items: center; gap: 10px; }
+    .name-cell-main { font-weight: 600; }
+    .name-cell-sub { font-size: 0.8rem; color: var(--text-muted); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: #dbeafe; color: #1d4ed8; }
+    .badge-green { background: #dcfce7; color: #166534; }
     .actions { display: flex; gap: 6px; }
-
-    .btn-icon {
-      padding: 5px 10px;
-      font-size: 0.8rem;
-      border-radius: 5px;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-muted);
-      transition: all 0.15s;
-      font-family: inherit;
-    }
-
+    .btn-icon { padding: 5px 10px; font-size: 0.8rem; border-radius: 5px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-muted); transition: all 0.15s; font-family: inherit; }
     .btn-icon:hover { background: var(--bg); color: var(--text); }
     .btn-icon.delete:hover { background: #fee2e2; color: var(--danger); border-color: #fca5a5; }
 
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text-muted);
-    }
-
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
     .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
     .empty-state p { margin-bottom: 16px; }
 
-    /* ── Modal ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.5);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
     .modal-overlay.open { display: flex; }
-
-    .modal {
-      background: var(--card-bg);
-      border-radius: 10px;
-      width: 100%;
-      max-width: 520px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-      display: flex;
-      flex-direction: column;
-      max-height: 90vh;
-    }
-
-    .modal-header {
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
+    .modal { background: var(--card-bg); border-radius: 10px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); display: flex; flex-direction: column; max-height: 90vh; }
+    .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
     .modal-header h2 { font-size: 1.1rem; }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.3rem;
-      cursor: pointer;
-      color: var(--text-muted);
-      line-height: 1;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
+    .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted); padding: 2px 6px; border-radius: 4px; }
     .modal-close:hover { background: var(--bg); color: var(--text); }
+    .modal-body { padding: 20px 24px; overflow-y: auto; }
+    .modal-footer { padding: 14px 24px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
 
-    .modal-body {
-      padding: 20px 24px;
-      overflow-y: auto;
-    }
-
+    /* Form */
     .form-row { display: flex; gap: 14px; }
     .form-row .form-group { flex: 1; }
-
     .form-group { margin-bottom: 16px; }
-
-    label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 5px;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-family: inherit;
-      color: var(--text);
-      background: var(--bg);
-      transition: border-color 0.15s;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      outline: 2px solid var(--primary);
-      outline-offset: 1px;
-      background: #fff;
-    }
-
+    label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; font-family: inherit; color: var(--text); background: var(--bg); }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; background: #fff; }
     textarea { resize: vertical; min-height: 80px; }
 
-    .modal-footer {
-      padding: 14px 24px 20px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-
-    /* ── Delete confirm ── */
-    .confirm-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.5);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
+    /* Confirm */
+    .confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
     .confirm-overlay.open { display: flex; }
-
-    .confirm-box {
-      background: var(--card-bg);
-      border-radius: 10px;
-      padding: 28px;
-      max-width: 360px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-    }
-
+    .confirm-box { background: var(--card-bg); border-radius: 10px; padding: 28px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
     .confirm-box .confirm-icon { font-size: 2rem; margin-bottom: 12px; }
     .confirm-box h3 { margin-bottom: 8px; }
     .confirm-box p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
     .confirm-buttons { display: flex; gap: 10px; justify-content: center; }
 
-    /* ── Responsive ── */
     @media (max-width: 640px) {
       .sidebar { display: none; }
       .main { margin-left: 0; }
@@ -380,146 +120,153 @@
       table, tbody, tr, td { display: block; width: 100%; }
       tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; padding: 8px 0; }
       td { border: none; padding: 6px 14px; }
-      td::before {
-        content: attr(data-label);
-        font-weight: 700;
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        display: block;
-        margin-bottom: 2px;
-      }
+      td::before { content: attr(data-label); font-weight: 700; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 2px; }
     }
   </style>
 </head>
 <body>
 
-<!-- Sidebar -->
 <aside class="sidebar">
   <div class="sidebar-logo">Simple<span>CRM</span></div>
   <nav class="sidebar-nav">
-    <div class="nav-item active">
+    <div class="nav-item active" id="nav-contacts" onclick="showView('contacts')">
       <span class="nav-icon">👥</span> Kontakte
     </div>
-    <div class="nav-item" style="opacity:.4;cursor:default;">
+    <div class="nav-item" id="nav-companies" onclick="showView('companies')">
       <span class="nav-icon">🏢</span> Unternehmen
     </div>
-    <div class="nav-item" style="opacity:.4;cursor:default;">
-      <span class="nav-icon">📋</span> Aufgaben
-    </div>
-    <div class="nav-item" style="opacity:.4;cursor:default;">
-      <span class="nav-icon">📈</span> Berichte
-    </div>
+    <div class="nav-item disabled"><span class="nav-icon">📋</span> Aufgaben</div>
+    <div class="nav-item disabled"><span class="nav-icon">📈</span> Berichte</div>
   </nav>
 </aside>
 
-<!-- Main -->
 <div class="main">
-  <header class="topbar">
-    <h1>Kontakte</h1>
-    <div class="topbar-right">
-      <input class="search-input" type="text" id="searchInput" placeholder="Suchen …" oninput="renderTable()">
-      <button class="btn btn-primary" onclick="openModal()">+ Neuer Kontakt</button>
-    </div>
-  </header>
 
-  <div class="content">
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Kontakte gesamt</div>
-        <div class="stat-value" id="statTotal">0</div>
+  <!-- ── Kontakte-View ── -->
+  <section id="view-contacts">
+    <header class="topbar">
+      <h1>Kontakte</h1>
+      <div class="topbar-right">
+        <input class="search-input" id="contactSearch" placeholder="Suchen …" oninput="renderContactTable()">
+        <button class="btn btn-primary" onclick="openContactModal()">+ Neuer Kontakt</button>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Unternehmen</div>
-        <div class="stat-value" id="statCompanies">0</div>
+    </header>
+    <div class="content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Kontakte gesamt</div><div class="stat-value" id="statContacts">0</div></div>
+        <div class="stat-card"><div class="stat-label">Unternehmen</div><div class="stat-value" id="statContactCompanies">0</div></div>
+        <div class="stat-card"><div class="stat-label">Zuletzt hinzugefügt</div><div class="stat-value" id="statLatest" style="font-size:1rem;padding-top:4px">–</div></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Zuletzt hinzugefügt</div>
-        <div class="stat-value" id="statLatest" style="font-size:1rem;padding-top:4px;">–</div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>Name</th><th>E-Mail</th><th>Telefon</th><th>Position</th><th></th></tr></thead>
+          <tbody id="contactTableBody"></tbody>
+        </table>
       </div>
     </div>
+  </section>
 
-    <div class="table-card">
-      <table id="contactTable">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>E-Mail</th>
-            <th>Telefon</th>
-            <th>Position</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+  <!-- ── Unternehmen-View ── -->
+  <section id="view-companies" style="display:none">
+    <header class="topbar">
+      <h1>Unternehmen</h1>
+      <div class="topbar-right">
+        <input class="search-input" id="companySearch" placeholder="Suchen …" oninput="renderCompanyTable()">
+        <button class="btn btn-primary" onclick="openCompanyModal()">+ Neues Unternehmen</button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Unternehmen gesamt</div><div class="stat-value" id="statCompanies">0</div></div>
+        <div class="stat-card"><div class="stat-label">Mit Kontakten</div><div class="stat-value" id="statWithContacts">0</div></div>
+        <div class="stat-card"><div class="stat-label">Branchen</div><div class="stat-value" id="statBranches">0</div></div>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>Unternehmen</th><th>Branche</th><th>Mitarbeiter</th><th>Kontakte</th><th></th></tr></thead>
+          <tbody id="companyTableBody"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
+  </section>
+
 </div>
 
-<!-- Modal: Kontakt hinzufügen / bearbeiten -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+<!-- ── Kontakt-Modal ── -->
+<div class="modal-overlay" id="contactModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
     <div class="modal-header">
-      <h2 id="modalTitle">Neuer Kontakt</h2>
-      <button class="modal-close" onclick="closeModal()" aria-label="Schließen">✕</button>
+      <h2 id="contactModalTitle">Neuer Kontakt</h2>
+      <button class="modal-close" onclick="closeContactModal()">✕</button>
     </div>
     <div class="modal-body">
       <form id="contactForm" onsubmit="saveContact(event)">
         <input type="hidden" id="contactId">
         <div class="form-row">
-          <div class="form-group">
-            <label for="vorname">Vorname *</label>
-            <input type="text" id="vorname" placeholder="Max" required>
-          </div>
-          <div class="form-group">
-            <label for="nachname">Nachname *</label>
-            <input type="text" id="nachname" placeholder="Mustermann" required>
-          </div>
+          <div class="form-group"><label for="c-vorname">Vorname *</label><input type="text" id="c-vorname" placeholder="Max" required></div>
+          <div class="form-group"><label for="c-nachname">Nachname *</label><input type="text" id="c-nachname" placeholder="Mustermann" required></div>
         </div>
-        <div class="form-group">
-          <label for="email">E-Mail</label>
-          <input type="email" id="email" placeholder="max@firma.de">
+        <div class="form-group"><label for="c-email">E-Mail</label><input type="email" id="c-email" placeholder="max@firma.de"></div>
+        <div class="form-row">
+          <div class="form-group"><label for="c-telefon">Telefon</label><input type="tel" id="c-telefon" placeholder="+49 123 456789"></div>
+          <div class="form-group"><label for="c-mobil">Mobil</label><input type="tel" id="c-mobil" placeholder="+49 170 1234567"></div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="telefon">Telefon</label>
-            <input type="tel" id="telefon" placeholder="+49 123 456789">
+            <label for="c-unternehmen">Unternehmen</label>
+            <input type="text" id="c-unternehmen" placeholder="Firma GmbH" list="companies-datalist" autocomplete="off">
+            <datalist id="companies-datalist"></datalist>
           </div>
-          <div class="form-group">
-            <label for="mobil">Mobil</label>
-            <input type="tel" id="mobil" placeholder="+49 170 1234567">
-          </div>
+          <div class="form-group"><label for="c-position">Position</label><input type="text" id="c-position" placeholder="Geschäftsführer"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="unternehmen">Unternehmen</label>
-            <input type="text" id="unternehmen" placeholder="Firma GmbH" list="companies-list" autocomplete="off">
-            <datalist id="companies-list"></datalist>
-          </div>
-          <div class="form-group">
-            <label for="position">Position</label>
-            <input type="text" id="position" placeholder="Geschäftsführer">
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="notizen">Notizen</label>
-          <textarea id="notizen" placeholder="Weitere Informationen …"></textarea>
-        </div>
+        <div class="form-group"><label for="c-notizen">Notizen</label><textarea id="c-notizen" placeholder="Weitere Informationen …"></textarea></div>
       </form>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-ghost" onclick="closeContactModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="document.getElementById('contactForm').requestSubmit()">Speichern</button>
     </div>
   </div>
 </div>
 
-<!-- Confirm: Löschen -->
+<!-- ── Unternehmen-Modal ── -->
+<div class="modal-overlay" id="companyModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="companyModalTitle">
+    <div class="modal-header">
+      <h2 id="companyModalTitle">Neues Unternehmen</h2>
+      <button class="modal-close" onclick="closeCompanyModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="companyForm" onsubmit="saveCompany(event)">
+        <input type="hidden" id="companyId">
+        <div class="form-group"><label for="co-name">Name *</label><input type="text" id="co-name" placeholder="Firma GmbH" required></div>
+        <div class="form-row">
+          <div class="form-group"><label for="co-branche">Branche</label><input type="text" id="co-branche" placeholder="Software / IT"></div>
+          <div class="form-group"><label for="co-mitarbeiter">Mitarbeiter</label><input type="number" id="co-mitarbeiter" placeholder="50" min="1"></div>
+        </div>
+        <div class="form-group"><label for="co-website">Website</label><input type="url" id="co-website" placeholder="https://www.firma.de"></div>
+        <div class="form-group"><label for="co-strasse">Straße &amp; Hausnummer</label><input type="text" id="co-strasse" placeholder="Musterstraße 1"></div>
+        <div class="form-row">
+          <div class="form-group" style="flex:0 0 130px"><label for="co-plz">PLZ</label><input type="text" id="co-plz" placeholder="12345"></div>
+          <div class="form-group"><label for="co-ort">Ort</label><input type="text" id="co-ort" placeholder="Musterstadt"></div>
+        </div>
+        <div class="form-group"><label for="co-land">Land</label><input type="text" id="co-land" placeholder="Deutschland"></div>
+        <div class="form-group"><label for="co-notizen">Notizen</label><textarea id="co-notizen" placeholder="Weitere Informationen …"></textarea></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCompanyModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="document.getElementById('companyForm').requestSubmit()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Löschen-Bestätigung ── -->
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-icon">🗑️</div>
-    <h3>Kontakt löschen?</h3>
-    <p id="confirmText">Dieser Kontakt wird unwiderruflich gelöscht.</p>
+    <h3>Löschen?</h3>
+    <p id="confirmText"></p>
     <div class="confirm-buttons">
       <button class="btn btn-ghost" onclick="closeConfirm()">Abbrechen</button>
       <button class="btn btn-danger" onclick="confirmDelete()">Löschen</button>
@@ -529,172 +276,247 @@
 
 <script>
   let allContacts = [];
+  let allCompanies = [];
   let deleteTargetId = null;
+  let deleteTargetType = null;
 
-  function initials(vorname, nachname) {
-    return ((vorname[0] || '') + (nachname[0] || '')).toUpperCase();
+  // ── Helpers ─────────────────────────────────
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
-
   function avatarColor(name) {
     const colors = ['#2563eb','#7c3aed','#db2777','#059669','#d97706','#dc2626'];
-    let hash = 0;
-    for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
-    return colors[Math.abs(hash) % colors.length];
+    let h = 0; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+    return colors[Math.abs(h) % colors.length];
+  }
+  function initials(...parts) { return parts.map(p => (p || '')[0] || '').join('').toUpperCase(); }
+
+  // ── View switching ───────────────────────────
+  function showView(view) {
+    document.getElementById('view-contacts').style.display  = view === 'contacts'  ? '' : 'none';
+    document.getElementById('view-companies').style.display = view === 'companies' ? '' : 'none';
+    document.getElementById('nav-contacts').classList.toggle('active', view === 'contacts');
+    document.getElementById('nav-companies').classList.toggle('active', view === 'companies');
+    if (view === 'companies') loadCompanies();
   }
 
+  // ── Contacts ────────────────────────────────
   async function loadContacts() {
-    const res = await fetch('/api/contacts');
-    allContacts = await res.json();
-    renderTable();
+    allContacts = await fetch('/api/contacts').then(r => r.json());
+    renderContactTable();
   }
 
-  function renderTable() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
+  function renderContactTable() {
+    const q = document.getElementById('contactSearch').value.toLowerCase();
     const filtered = allContacts.filter(c =>
-      [c.vorname, c.nachname, c.email, c.unternehmen, c.position]
-        .some(v => (v || '').toLowerCase().includes(query))
+      [c.vorname, c.nachname, c.email, c.unternehmen, c.position].some(v => (v||'').toLowerCase().includes(q))
     );
-
-    const tbody = document.getElementById('tableBody');
-
-    if (filtered.length === 0) {
-      tbody.innerHTML = `
-        <tr><td colspan="5">
-          <div class="empty-state">
-            <div class="empty-icon">👥</div>
-            <p>${query ? 'Keine Treffer für „' + query + '"' : 'Noch keine Kontakte angelegt.'}</p>
-            ${!query ? '<button class="btn btn-primary" onclick="openModal()">+ Ersten Kontakt hinzufügen</button>' : ''}
-          </div>
-        </td></tr>`;
+    const tbody = document.getElementById('contactTableBody');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <p>${q ? 'Keine Treffer für „'+esc(q)+'"' : 'Noch keine Kontakte angelegt.'}</p>
+        ${!q ? '<button class="btn btn-primary" onclick="openContactModal()">+ Ersten Kontakt hinzufügen</button>' : ''}
+      </div></td></tr>`;
     } else {
-      tbody.innerHTML = filtered.map(c => `
-        <tr>
-          <td data-label="Name">
-            <div class="contact-name-cell">
-              <div class="contact-avatar" style="background:${avatarColor(c.vorname + c.nachname)}">${initials(c.vorname, c.nachname)}</div>
-              <div>
-                <div class="contact-name">${esc(c.vorname)} ${esc(c.nachname)}</div>
-                ${c.unternehmen ? `<div class="contact-company">${esc(c.unternehmen)}</div>` : ''}
-              </div>
-            </div>
-          </td>
-          <td data-label="E-Mail">${c.email ? `<a href="mailto:${esc(c.email)}" style="color:var(--primary)">${esc(c.email)}</a>` : '–'}</td>
-          <td data-label="Telefon">${c.telefon ? `<a href="tel:${esc(c.telefon)}" style="color:inherit">${esc(c.telefon)}</a>` : '–'}</td>
-          <td data-label="Position">${c.position ? `<span class="badge">${esc(c.position)}</span>` : '–'}</td>
-          <td data-label="Aktionen">
-            <div class="actions">
-              <button class="btn-icon" onclick="openModal('${c.id}')">✏️ Bearbeiten</button>
-              <button class="btn-icon delete" onclick="askDelete('${c.id}', '${esc(c.vorname)} ${esc(c.nachname)}')">🗑️</button>
-            </div>
-          </td>
-        </tr>`).join('');
+      tbody.innerHTML = filtered.map(c => `<tr>
+        <td data-label="Name"><div class="name-cell">
+          <div class="avatar" style="background:${avatarColor(c.vorname+c.nachname)}">${initials(c.vorname,c.nachname)}</div>
+          <div><div class="name-cell-main">${esc(c.vorname)} ${esc(c.nachname)}</div>
+          ${c.unternehmen ? `<div class="name-cell-sub">${esc(c.unternehmen)}</div>` : ''}</div>
+        </div></td>
+        <td data-label="E-Mail">${c.email ? `<a href="mailto:${esc(c.email)}" style="color:var(--primary)">${esc(c.email)}</a>` : '–'}</td>
+        <td data-label="Telefon">${c.telefon ? `<a href="tel:${esc(c.telefon)}" style="color:inherit">${esc(c.telefon)}</a>` : '–'}</td>
+        <td data-label="Position">${c.position ? `<span class="badge">${esc(c.position)}</span>` : '–'}</td>
+        <td data-label="Aktionen"><div class="actions">
+          <button class="btn-icon" onclick="openContactModal('${c.id}')">✏️ Bearbeiten</button>
+          <button class="btn-icon delete" onclick="askDelete('${c.id}','${esc(c.vorname)} ${esc(c.nachname)}','contact')">🗑️</button>
+        </div></td>
+      </tr>`).join('');
     }
-
-    updateStats(allContacts);
+    document.getElementById('statContacts').textContent = allContacts.length;
+    document.getElementById('statContactCompanies').textContent = new Set(allContacts.map(c=>c.unternehmen).filter(Boolean)).size;
+    const last = allContacts[allContacts.length - 1];
+    document.getElementById('statLatest').textContent = last ? `${last.vorname} ${last.nachname}` : '–';
   }
 
-  function updateStats(contacts) {
-    document.getElementById('statTotal').textContent = contacts.length;
-    const companies = new Set(contacts.map(c => c.unternehmen).filter(Boolean));
-    document.getElementById('statCompanies').textContent = companies.size;
-    if (contacts.length > 0) {
-      const last = contacts[contacts.length - 1];
-      document.getElementById('statLatest').textContent = `${last.vorname} ${last.nachname}`;
-    } else {
-      document.getElementById('statLatest').textContent = '–';
-    }
-  }
-
-  function openModal(id = null) {
+  function openContactModal(id = null) {
     document.getElementById('contactForm').reset();
     document.getElementById('contactId').value = '';
-    document.getElementById('modalTitle').textContent = 'Neuer Kontakt';
-
+    document.getElementById('contactModalTitle').textContent = 'Neuer Kontakt';
     if (id) {
-      const contact = allContacts.find(c => c.id === id);
-      if (!contact) return;
-      document.getElementById('modalTitle').textContent = 'Kontakt bearbeiten';
-      document.getElementById('contactId').value = contact.id;
-      ['vorname','nachname','email','telefon','mobil','unternehmen','position','notizen']
-        .forEach(f => { document.getElementById(f).value = contact[f] || ''; });
+      const c = allContacts.find(c => c.id === id); if (!c) return;
+      document.getElementById('contactModalTitle').textContent = 'Kontakt bearbeiten';
+      document.getElementById('contactId').value = c.id;
+      document.getElementById('c-vorname').value = c.vorname || '';
+      document.getElementById('c-nachname').value = c.nachname || '';
+      document.getElementById('c-email').value = c.email || '';
+      document.getElementById('c-telefon').value = c.telefon || '';
+      document.getElementById('c-mobil').value = c.mobil || '';
+      document.getElementById('c-unternehmen').value = c.unternehmen || '';
+      document.getElementById('c-position').value = c.position || '';
+      document.getElementById('c-notizen').value = c.notizen || '';
     }
-
-    fetch('/api/companies')
-      .then(r => r.json())
-      .then(companies => {
-        const list = document.getElementById('companies-list');
-        list.innerHTML = companies.map(c => `<option value="${esc(c)}">`).join('');
-      });
-
-    document.getElementById('modalOverlay').classList.add('open');
-    document.getElementById('vorname').focus();
+    fetch('/api/companies').then(r => r.json()).then(cos => {
+      document.getElementById('companies-datalist').innerHTML = cos.map(c => `<option value="${esc(c.name)}">`).join('');
+    });
+    document.getElementById('contactModalOverlay').classList.add('open');
+    document.getElementById('c-vorname').focus();
   }
 
-  function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('open');
-  }
+  function closeContactModal() { document.getElementById('contactModalOverlay').classList.remove('open'); }
 
   async function saveContact(event) {
     event.preventDefault();
     const id = document.getElementById('contactId').value;
-
     const data = {
       id: id || crypto.randomUUID(),
-      vorname: document.getElementById('vorname').value.trim(),
-      nachname: document.getElementById('nachname').value.trim(),
-      email: document.getElementById('email').value.trim(),
-      telefon: document.getElementById('telefon').value.trim(),
-      mobil: document.getElementById('mobil').value.trim(),
-      unternehmen: document.getElementById('unternehmen').value.trim(),
-      position: document.getElementById('position').value.trim(),
-      notizen: document.getElementById('notizen').value.trim(),
+      vorname: document.getElementById('c-vorname').value.trim(),
+      nachname: document.getElementById('c-nachname').value.trim(),
+      email: document.getElementById('c-email').value.trim(),
+      telefon: document.getElementById('c-telefon').value.trim(),
+      mobil: document.getElementById('c-mobil').value.trim(),
+      unternehmen: document.getElementById('c-unternehmen').value.trim(),
+      position: document.getElementById('c-position').value.trim(),
+      notizen: document.getElementById('c-notizen').value.trim(),
     };
-
-    const url = id ? `/api/contacts/${id}` : '/api/contacts';
-    const method = id ? 'PUT' : 'POST';
-
-    await fetch(url, {
-      method,
+    await fetch(id ? `/api/contacts/${id}` : '/api/contacts', {
+      method: id ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-
-    closeModal();
+    closeContactModal();
     await loadContacts();
   }
 
-  function askDelete(id, name) {
-    deleteTargetId = id;
-    document.getElementById('confirmText').textContent = `„${name}" wird unwiderruflich gelöscht.`;
+  // ── Companies ────────────────────────────────
+  async function loadCompanies() {
+    allCompanies = await fetch('/api/companies').then(r => r.json());
+    renderCompanyTable();
+  }
+
+  function renderCompanyTable() {
+    const q = document.getElementById('companySearch').value.toLowerCase();
+    const filtered = allCompanies.filter(c =>
+      [c.name, c.branche, c.ort].some(v => (v||'').toLowerCase().includes(q))
+    );
+    const tbody = document.getElementById('companyTableBody');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+        <div class="empty-icon">🏢</div>
+        <p>${q ? 'Keine Treffer für „'+esc(q)+'"' : 'Noch keine Unternehmen angelegt.'}</p>
+        ${!q ? '<button class="btn btn-primary" onclick="openCompanyModal()">+ Erstes Unternehmen hinzufügen</button>' : ''}
+      </div></td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map(c => `<tr>
+        <td data-label="Unternehmen"><div class="name-cell">
+          <div class="avatar" style="background:${avatarColor(c.name)}">${(c.name[0]||'').toUpperCase()}</div>
+          <div><div class="name-cell-main">${esc(c.name)}</div>
+          ${c.ort ? `<div class="name-cell-sub">${c.plz ? esc(c.plz)+' ' : ''}${esc(c.ort)}</div>` : ''}</div>
+        </div></td>
+        <td data-label="Branche">${c.branche ? `<span class="badge">${esc(c.branche)}</span>` : '–'}</td>
+        <td data-label="Mitarbeiter">${c.mitarbeiter ? Number(c.mitarbeiter).toLocaleString('de-DE') : '–'}</td>
+        <td data-label="Kontakte">
+          <span class="badge badge-green" style="cursor:pointer" onclick="filterContactsByCompany('${esc(c.name)}')">
+            ${c.kontakte} Kontakt${c.kontakte != 1 ? 'e' : ''}
+          </span>
+        </td>
+        <td data-label="Aktionen"><div class="actions">
+          <button class="btn-icon" onclick="openCompanyModal('${c.id}')">✏️ Bearbeiten</button>
+          <button class="btn-icon delete" onclick="askDelete('${c.id}','${esc(c.name)}','company')">🗑️</button>
+        </div></td>
+      </tr>`).join('');
+    }
+    document.getElementById('statCompanies').textContent = allCompanies.length;
+    document.getElementById('statWithContacts').textContent = allCompanies.filter(c => c.kontakte > 0).length;
+    document.getElementById('statBranches').textContent = new Set(allCompanies.map(c=>c.branche).filter(Boolean)).size;
+  }
+
+  function filterContactsByCompany(name) {
+    showView('contacts');
+    document.getElementById('contactSearch').value = name;
+    renderContactTable();
+  }
+
+  function openCompanyModal(id = null) {
+    document.getElementById('companyForm').reset();
+    document.getElementById('companyId').value = '';
+    document.getElementById('companyModalTitle').textContent = 'Neues Unternehmen';
+    if (id) {
+      const c = allCompanies.find(c => c.id === id); if (!c) return;
+      document.getElementById('companyModalTitle').textContent = 'Unternehmen bearbeiten';
+      document.getElementById('companyId').value = c.id;
+      document.getElementById('co-name').value = c.name || '';
+      document.getElementById('co-branche').value = c.branche || '';
+      document.getElementById('co-mitarbeiter').value = c.mitarbeiter || '';
+      document.getElementById('co-website').value = c.website || '';
+      document.getElementById('co-strasse').value = c.strasse || '';
+      document.getElementById('co-plz').value = c.plz || '';
+      document.getElementById('co-ort').value = c.ort || '';
+      document.getElementById('co-land').value = c.land || '';
+      document.getElementById('co-notizen').value = c.notizen || '';
+    }
+    document.getElementById('companyModalOverlay').classList.add('open');
+    document.getElementById('co-name').focus();
+  }
+
+  function closeCompanyModal() { document.getElementById('companyModalOverlay').classList.remove('open'); }
+
+  async function saveCompany(event) {
+    event.preventDefault();
+    const id = document.getElementById('companyId').value;
+    const mitarbeiter = document.getElementById('co-mitarbeiter').value;
+    const data = {
+      id: id || crypto.randomUUID(),
+      name: document.getElementById('co-name').value.trim(),
+      branche: document.getElementById('co-branche').value.trim(),
+      mitarbeiter: mitarbeiter ? parseInt(mitarbeiter) : null,
+      website: document.getElementById('co-website').value.trim(),
+      strasse: document.getElementById('co-strasse').value.trim(),
+      plz: document.getElementById('co-plz').value.trim(),
+      ort: document.getElementById('co-ort').value.trim(),
+      land: document.getElementById('co-land').value.trim(),
+      notizen: document.getElementById('co-notizen').value.trim(),
+    };
+    await fetch(id ? `/api/companies/${id}` : '/api/companies', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    closeCompanyModal();
+    await loadCompanies();
+  }
+
+  // ── Delete ──────────────────────────────────
+  function askDelete(id, name, type) {
+    deleteTargetId = id; deleteTargetType = type;
+    document.getElementById('confirmText').textContent =
+      `${type === 'company' ? 'Unternehmen' : 'Kontakt'} „${name}" wird unwiderruflich gelöscht.`;
     document.getElementById('confirmOverlay').classList.add('open');
   }
-
   function closeConfirm() {
-    deleteTargetId = null;
+    deleteTargetId = null; deleteTargetType = null;
     document.getElementById('confirmOverlay').classList.remove('open');
   }
-
   async function confirmDelete() {
     if (!deleteTargetId) return;
-    await fetch(`/api/contacts/${deleteTargetId}`, { method: 'DELETE' });
+    await fetch(`/api/${deleteTargetType === 'company' ? 'companies' : 'contacts'}/${deleteTargetId}`, { method: 'DELETE' });
     closeConfirm();
-    await loadContacts();
+    deleteTargetType === 'company' ? await loadCompanies() : await loadContacts();
   }
 
-  function esc(str) {
-    return String(str || '')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  }
-
-  document.getElementById('modalOverlay').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeModal();
-  });
-  document.getElementById('confirmOverlay').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeConfirm();
+  // ── Events ──────────────────────────────────
+  ['contactModalOverlay','companyModalOverlay','confirmOverlay'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => {
+      if (e.target === e.currentTarget) {
+        if (id === 'contactModalOverlay') closeContactModal();
+        else if (id === 'companyModalOverlay') closeCompanyModal();
+        else closeConfirm();
+      }
+    });
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+    if (e.key === 'Escape') { closeContactModal(); closeCompanyModal(); closeConfirm(); }
   });
 
   loadContacts();
